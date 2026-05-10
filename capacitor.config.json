@@ -1,0 +1,15 @@
+{
+  "appId": "com.dentalclinic.app",
+  "appName": "طب الأسنان الرقمي",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchAutoHide": false,
+      "showSpinner": true,
+      "spinnerColor": "#3B82F6"
+    }
+  }
+}

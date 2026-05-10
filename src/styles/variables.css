@@ -1,0 +1,26 @@
+/* ══════════════════════════════════════════
+   CSS Variables — Design tokens
+══════════════════════════════════════════ */
+:root {
+  --navy: #060C1A;
+  --navy-mid: #0A1428;
+  --navy-card: #0E1A30;
+  --navy-light: #142040;
+  --gold: #3B82F6;
+  --gold-l: #93C5FD;
+  --gold-d: #1D4ED8;
+  --gold-g: linear-gradient(135deg, #60A5FA 0%, #3B82F6 50%, #1D4ED8 100%);
+  --gb: rgba(8,16,40,.85);
+  --gbo: rgba(59,130,246,.22);
+  --green: #2dd4a0;
+  --blue: #60A5FA;
+  --red: #ff4455;
+  --orange: #38BDF8;
+  --fs: 1;
+}
+
+/* ── FONT SIZE LEVELS ── */
+body.fs-small { --fs: 0.85; }
+body.fs-medium { --fs: 1; }
+body.fs-large { --fs: 1.2; }
+body.fs-xlarge { --fs: 1.45; }
