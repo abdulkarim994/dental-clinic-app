@@ -198,8 +198,8 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, provide } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, watch, provide, onMounted, nextTick } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useAppStore } from '@/stores/app.store'
 import { useAuthStore } from '@/stores/auth.store'
 import { useToast } from '@/composables/useToast'
@@ -210,6 +210,7 @@ import { sum, isProsDebtPay, prosDocEarnings, n } from '@/utils/helpers'
 import ToothReport from './components/ToothReport.vue'
 
 const router = useRouter()
+const route = useRoute()
 const app = useAppStore()
 const auth = useAuthStore()
 const { toast } = useToast()
@@ -256,6 +257,15 @@ const form = ref({
   labExpectedDate: '',
   labStatus: '',
   appointment: '',
+})
+
+// Handle ?name= from patients tab (add visit for patient)
+onMounted(() => {
+  const q = route.query
+  if (q.name) {
+    form.value.name = q.name
+    router.replace({ name: 'add', query: {} })
+  }
 })
 
 const cur = computed(() => app.currency)
