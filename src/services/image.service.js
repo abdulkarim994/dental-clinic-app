@@ -1,4 +1,4 @@
-import { r2Url, uploadImage, deleteImage, compressImage, createThumbnail } from './r2.service'
+import { r2Url, fetchImageSecure, uploadImage, deleteImage, compressImage, createThumbnail } from './r2.service'
 import { saveThumbnailToIDB, getThumbnailFromIDB, removeThumbnailFromIDB } from './image-pipeline.service'
 
 const _imageCache = new Map()
@@ -184,6 +184,23 @@ export async function uploadXrayImage(file, patientName, uid) {
   saveLocalXrayData(key, dataUrl)
   _imageCache.set(key, dataUrl)
   return key
+}
+
+/**
+ * Load an image securely via Authorization header instead of token-in-URL.
+ * Returns a blob URL. Falls back to r2Url if the secure fetch fails.
+ * Use this for sensitive image contexts where URL leakage is a concern.
+ */
+export async function getImageSecure(key) {
+  if (_imageCache.has(`secure:${key}`)) return _imageCache.get(`secure:${key}`)
+  const localData = getLocalXrayData(key)
+  if (localData) return localData
+  const blobUrl = await fetchImageSecure(key)
+  if (blobUrl) {
+    _imageCache.set(`secure:${key}`, blobUrl)
+    evictOldest()
+  }
+  return blobUrl || getImageUrl(key)
 }
 
 export async function deleteXrayImage(key) {

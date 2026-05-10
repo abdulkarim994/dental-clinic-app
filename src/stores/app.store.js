@@ -86,6 +86,15 @@ export const useAppStore = defineStore('app', () => {
     })
   }
 
+  /**
+   * Persist current state to local cache and sync to Supabase.
+   * Convenience method to replace the repeated saveToCache + syncSave pattern.
+   */
+  async function persistAndSync(uid) {
+    saveToCache(uid)
+    return syncSave(uid, false)
+  }
+
   async function syncSave(uid, showOl = false) {
     if (showOl) {
       syncSt.syncing = true
@@ -213,6 +222,7 @@ export const useAppStore = defineStore('app', () => {
     payments,
     loadFromCache,
     saveToCache,
+    persistAndSync,
     syncSave,
     syncLoad,
     addRecord,
