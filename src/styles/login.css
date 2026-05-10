@@ -1,0 +1,8 @@
+/* ══════════════════════════════════════════
+   Login Screen Styles
+══════════════════════════════════════════ */
+.login-bg {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px 16px;
+  background: radial-gradient(ellipse 110% 65% at 50% -5%, rgba(59,130,246,.18) 0%, transparent 55%),
+    radial-gradient(ellipse 70% 50% at 5% 100%, rgba(56,189,248,.09) 0%, transparent 55%), var(--navy);
+}
