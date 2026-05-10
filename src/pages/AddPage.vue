@@ -298,21 +298,24 @@ async function saveRecord() {
   saving.value = true
   try {
     const isPros = isProsthetic(form.service)
+    const apptDate = (form.hasAppt && form.apptDate) ? form.apptDate : ''
     const rec = {
       id: editId.value || uid(),
       date: form.date || todayStr(),
       amount: Number(form.amount) || 0,
       name: form.name.trim(),
       clinic: form.clinic || configStore.clinics[0] || '',
-      payment: form.payment || configStore.payments[0] || '',
+      payment: form.isDebt ? 'دين' : (form.payment || configStore.payments[0] || ''),
       service: form.service,
-      notes: form.notes || '',
+      isDebt: form.isDebt || false,
+      ...(apptDate ? { appointment: apptDate } : {}),
       ...(isPros ? {
+        _t: 'p',
         labCost: Number(form.labCost) || 0,
         labSent: form.labSent || '',
         labExpected: form.labExpected || '',
         labStatus: form.labStatus || ''
-      } : {})
+      } : { _t: 'r' })
     }
 
     if (editId.value) {
@@ -322,6 +325,7 @@ async function saveRecord() {
     }
 
     if (form.isDebt && !editId.value) {
+      const firstPay = Number(form.firstPayment) || 0
       debtsStore.addDebt({
         name: form.name.trim(),
         amount: Number(form.amount) || 0,
@@ -329,16 +333,17 @@ async function saveRecord() {
         service: form.service,
         phone: form.debtPhone || '',
         note: form.debtNote || '',
-        payments: []
+        firstPayment: firstPay,
+        payments: firstPay > 0 ? [{ amount: firstPay, date: form.date || todayStr(), id: uid() }] : []
       })
     }
 
-    if (form.hasAppt && form.apptDate) {
+    if (apptDate) {
       apptsStore.addAppointment({
         name: form.name.trim(),
         date: form.apptDate,
-        time: form.apptTime || '',
-        service: form.apptSvc || form.service
+        time: '',
+        service: form.service
       })
     }
 
@@ -368,6 +373,7 @@ function resetForm() {
   form.labExpected = ''
   form.labStatus = ''
   form.isDebt = false
+  form.firstPayment = ''
   form.debtPhone = ''
   form.debtNote = ''
   form.hasAppt = false

@@ -1,41 +1,18 @@
 <template>
   <div class="max-w-lg mx-auto px-4 mt-4 space-y-4 tab-in">
-    <div class="flex justify-between items-center">
-      <div class="sec-h">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M2 10h20M7 15h4"/></svg>
-        الديون
-      </div>
-      <button @click="$emit('addDebt')" class="btn-g px-4 py-2 text-xs">+ دين جديد</button>
-    </div>
-
-    <!-- Summary -->
-    <div class="grid grid-cols-2 gap-2">
-      <div class="stat-card p-3 text-center">
-        <div class="today-val n" style="color:var(--red)">{{ n(debtsStore.totalDebt) }}</div>
-        <div class="text-[9px] opacity-40 mt-1">إجمالي الديون</div>
-      </div>
-      <div class="stat-card p-3 text-center">
-        <div class="today-val">{{ debtsStore.debtCount }}</div>
-        <div class="text-[9px] opacity-40 mt-1">عدد المدينين</div>
-      </div>
-    </div>
-
-    <!-- Sub tabs -->
-    <div class="flex gap-2 glass-sm p-1.5">
-      <button @click="subTab = 'active'" class="p-sub" :class="{ on: subTab === 'active' }">نشطة ({{ debtsStore.activeDebts.length }})</button>
-      <button @click="subTab = 'settled'" class="p-sub" :class="{ on: subTab === 'settled' }">مسددة ({{ debtsStore.settledDebts.length }})</button>
-    </div>
-
     <!-- Search -->
-    <input type="text" v-model="search" class="inp text-xs" placeholder="بحث بالاسم...">
+    <div class="mb-4 relative">
+      <input type="text" v-model="search" class="inp" placeholder="ابحث باسم المريض..." autocomplete="off">
+    </div>
 
-    <!-- Active debts -->
-    <div v-if="subTab === 'active'">
-      <div v-if="filteredActive.length === 0" class="text-center py-12 opacity-25">
-        <div class="text-4xl mb-2">💰</div>
-        <p class="text-xs">لا توجد ديون نشطة</p>
+    <!-- Debts list -->
+    <div>
+      <div v-if="filteredDebts.length === 0" class="text-center py-16 opacity-25">
+        <div class="mb-3 flex justify-center"><svg viewBox="0 0 24 24" width="54" height="54" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" style="color:var(--green)"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+        <p class="text-sm font-bold">لا توجد ديون مسجلة</p>
       </div>
-      <div v-for="d in filteredActive" :key="d.id" class="row-card p-3 mb-2">
+      <div class="space-y-3">
+      <div v-for="d in filteredDebts" :key="d.id" class="row-card p-3">
         <div class="flex justify-between items-start gap-2">
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-2 mb-1">
@@ -74,22 +51,6 @@
           </button>
         </div>
       </div>
-    </div>
-
-    <!-- Settled debts -->
-    <div v-if="subTab === 'settled'">
-      <div v-if="filteredSettled.length === 0" class="text-center py-12 opacity-25">
-        <div class="text-4xl mb-2">✅</div>
-        <p class="text-xs">لا توجد ديون مسددة</p>
-      </div>
-      <div v-for="d in filteredSettled" :key="d.id" class="row-card p-3 mb-2" style="opacity:.5">
-        <div class="flex justify-between items-center">
-          <div>
-            <span class="text-sm font-bold">{{ d.name }}</span>
-            <span class="b-debt-settled mr-2">مسدد</span>
-          </div>
-          <span class="n text-xs" style="color:var(--green)">{{ n(d.amount) }}</span>
-        </div>
       </div>
     </div>
   </div>
@@ -105,21 +66,15 @@ const debtsStore = useDebtsStore()
 
 defineEmits(['addDebt', 'payDebt', 'settleDebt', 'editDebt', 'deleteDebt', 'goToPatient'])
 
-const subTab = ref('active')
 const search = ref('')
 
 const waIcon = ICONS.whatsapp
 
-const filteredActive = computed(() => {
+const filteredDebts = computed(() => {
   const q = search.value.trim().toLowerCase()
-  if (!q) return debtsStore.activeDebts
-  return debtsStore.activeDebts.filter(d => (d.name || '').toLowerCase().includes(q))
-})
-
-const filteredSettled = computed(() => {
-  const q = search.value.trim().toLowerCase()
-  if (!q) return debtsStore.settledDebts
-  return debtsStore.settledDebts.filter(d => (d.name || '').toLowerCase().includes(q))
+  const all = debtsStore.activeDebts
+  if (!q) return all
+  return all.filter(d => (d.name || '').toLowerCase().includes(q))
 })
 
 function getTotalPaid(d) {
