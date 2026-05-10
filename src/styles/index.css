@@ -1,6 +1,7 @@
 /* ══════════════════════════════════════════
    Master Style Entry — imports all modules
 ══════════════════════════════════════════ */
+@import 'tailwindcss';
 @import './variables.css';
 @import './base.css';
 @import './navigation.css';
