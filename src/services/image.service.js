@@ -23,9 +23,16 @@ export function getImageUrl(key) {
     evictOldest()
     return localData
   }
+  // Return immediate URL for sync rendering, then upgrade to secure blob in background
   const url = r2Url(key)
   _imageCache.set(key, url)
   evictOldest()
+  // Async upgrade: replace token-in-URL with secure blob URL
+  fetchImageSecure(key).then(blobUrl => {
+    if (blobUrl && blobUrl !== url) {
+      _imageCache.set(key, blobUrl)
+    }
+  }).catch(() => {})
   return url
 }
 

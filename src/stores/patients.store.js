@@ -4,6 +4,7 @@ import { useAppStore } from './app.store'
 import { fuzzyMatch, fuzzyScore } from '@/utils/search'
 import { getPatientPhotoFromStorage, savePatientPhotoToStorage } from '@/services/image.service'
 import { isProsthetic } from '@/utils/format'
+import { useMemoizedArray } from '@/composables/useMemoized'
 
 export const usePatientsStore = defineStore('patients', () => {
   const searchQuery = ref('')
@@ -83,7 +84,7 @@ export const usePatientsStore = defineStore('patients', () => {
     return map
   })
 
-  const filteredPatients = computed(() => {
+  const _rawFilteredPatients = computed(() => {
     const map = patientMap.value
     let pts = Object.values(map).sort(
       (a, b) => (b.lastMod || 0) - (a.lastMod || 0) || b.lastDate.localeCompare(a.lastDate),
@@ -97,6 +98,8 @@ export const usePatientsStore = defineStore('patients', () => {
 
     return pts
   })
+
+  const filteredPatients = useMemoizedArray(() => _rawFilteredPatients.value)
 
   const totalPatients = computed(() => Object.keys(patientMap.value).length)
 

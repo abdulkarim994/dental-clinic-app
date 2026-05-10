@@ -1,5 +1,6 @@
 import { sbUpsert, sbGet, supabase } from './supabase.service'
 import { cacheSaveAll, cacheGetAll } from './cache.service'
+import { queries, abortAllRequests as abortSBQueries } from './supabase-query.service'
 
 const _dirtyMonths = new Set()
 let _debtsDirty = false
@@ -180,10 +181,10 @@ export async function loadFromSupabase(uid) {
 
   try {
     const [index, debtsData, apptsData, cfgData] = await Promise.all([
-      sbGet(uid, 'index', ''),
-      sbGet(uid, 'debts', ''),
-      sbGet(uid, 'appointments', ''),
-      sbGet(uid, 'config', ''),
+      queries.getIndex(uid),
+      queries.getDebts(uid),
+      queries.getAppointments(uid),
+      queries.getConfig(uid),
     ])
 
     if (debtsData) results.debts = debtsData
@@ -215,7 +216,7 @@ export async function loadFromSupabase(uid) {
 export async function ensureMonthLoaded(uid, month) {
   if (_loadedMonths.has(month)) return null
   try {
-    const data = await sbGet(uid, 'month', month)
+    const data = await queries.getMonth(uid, month)
     _loadedMonths.add(month)
     return data
   } catch (e) {

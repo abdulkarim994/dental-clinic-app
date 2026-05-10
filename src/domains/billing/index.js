@@ -24,3 +24,4 @@ export {
   getPatientReport,
   getServiceBreakdown,
 } from '@/modules/reports/reports.service'
+export { usePagination, useInfiniteScroll, paginate } from '@/utils/pagination'
