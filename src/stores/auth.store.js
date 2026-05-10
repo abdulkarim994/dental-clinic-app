@@ -1,38 +1,23 @@
-/**
- * Auth Store — manages user authentication state
- */
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { SB } from '../services/supabase.service'
-import * as authService from '../services/auth.service'
+import { login, register, logout, getSession, onAuthStateChange } from '@/services/auth.service'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref(null)
-  const userId = ref(null)
-  const sbToken = ref('')
+  const uid = ref(null)
   const loading = ref(false)
   const error = ref('')
 
-  const isLoggedIn = computed(() => !!userId.value)
+  const isLoggedIn = computed(() => !!user.value)
   const userEmail = computed(() => user.value?.email || '')
 
-  async function login(email, password) {
+  async function doLogin(email, password) {
     loading.value = true
     error.value = ''
     try {
-      await authService.login(email, password)
-    } catch (e) {
-      error.value = e.message
-    } finally {
-      loading.value = false
-    }
-  }
-
-  async function register(email, password) {
-    loading.value = true
-    error.value = ''
-    try {
-      await authService.register(email, password)
+      const data = await login(email, password)
+      user.value = data.user
+      uid.value = data.user?.id || null
     } catch (e) {
       error.value = e.message
       throw e
@@ -41,39 +26,61 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function logout() {
-    await authService.logout()
-    user.value = null
-    userId.value = null
-    sbToken.value = ''
-  }
-
-  function setUser(u, token) {
-    user.value = u
-    userId.value = u?.id || null
-    sbToken.value = token || ''
-  }
-
-  function updateToken(token) {
-    sbToken.value = token
-  }
-
-  async function refreshSession() {
+  async function doRegister(email, password) {
+    loading.value = true
+    error.value = ''
     try {
-      const session = await authService.getSession()
-      if (session) {
-        sbToken.value = session.access_token
-      }
-      return session
+      const data = await register(email, password)
+      return data
     } catch (e) {
-      console.error('[VIS]', e)
-      return null
+      error.value = e.message
+      throw e
+    } finally {
+      loading.value = false
     }
   }
 
+  async function doLogout() {
+    await logout()
+    user.value = null
+    uid.value = null
+  }
+
+  async function checkSession() {
+    const session = await getSession()
+    if (session?.user) {
+      user.value = session.user
+      uid.value = session.user.id
+    }
+    return session
+  }
+
+  function initAuthListener(onLogin, onLogout) {
+    return onAuthStateChange((event, session) => {
+      if (session?.user) {
+        if (uid.value === session.user.id) return
+        user.value = session.user
+        uid.value = session.user.id
+        onLogin?.(session)
+      } else {
+        user.value = null
+        uid.value = null
+        onLogout?.()
+      }
+    })
+  }
+
   return {
-    user, userId, sbToken, loading, error,
-    isLoggedIn, userEmail,
-    login, register, logout, setUser, updateToken, refreshSession
+    user,
+    uid,
+    loading,
+    error,
+    isLoggedIn,
+    userEmail,
+    doLogin,
+    doRegister,
+    doLogout,
+    checkSession,
+    initAuthListener,
   }
 })

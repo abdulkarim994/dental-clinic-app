@@ -1,160 +1,148 @@
-/**
- * Sync Service — handles data synchronization between local and Supabase
- * Manages month-based document structure, dirty tracking, and realtime
- */
-import { SB, sbUpsert, sbGet } from './supabase.service'
+import { sbUpsert, sbGet, supabase } from './supabase.service'
+import { cacheSaveAll, cacheGetAll } from './cache.service'
 
-/**
- * Build month document from records arrays
- */
-export function buildMonthDoc(records, prosthetics, month) {
-  return {
-    records: records.filter(r => monthOf(r.date) === month),
-    prosthetics: prosthetics.filter(p => monthOf(p.date) === month),
-    _mod: Date.now()
-  }
+const _dirtyMonths = new Set()
+let _debtsDirty = false
+let _apptsDirty = false
+const _knownMonths = new Set()
+
+export function markMonthDirty(dateStr) {
+  const month = monthOf(dateStr)
+  if (month) _dirtyMonths.add(month)
 }
 
-/**
- * Extract month (YYYY-MM) from date string
- */
+export function markDebtsDirty() {
+  _debtsDirty = true
+}
+
+export function markApptsDirty() {
+  _apptsDirty = true
+}
+
 export function monthOf(d) {
   return (d || '').substring(0, 7)
 }
 
-/**
- * Save data to Supabase — saves only dirty months for efficiency
- */
-export async function saveToSupabase(userId, { records, prosthetics, debts, appointments, cfg, dirtyMonths, knownMonths, debtsDirty, apptsDirty, showOl = false, onProgress }) {
-  if (!userId) return false
-  if (!showOl && dirtyMonths.size === 0 && !debtsDirty && !apptsDirty) return true
+export function getKnownMonths() {
+  return _knownMonths
+}
+
+export function buildMonthDoc(month, records, prosthetics) {
+  return {
+    records: records.filter(r => monthOf(r.date) === month),
+    prosthetics: prosthetics.filter(p => monthOf(p.date) === month),
+    _ts: Date.now(),
+  }
+}
+
+export function mergeMonthData(month, data, records, prosthetics) {
+  if (!data) return { records, prosthetics }
+  const newRecords = records.filter(r => monthOf(r.date) !== month)
+  const newProsthetics = prosthetics.filter(p => monthOf(p.date) !== month)
+  if (data.records) newRecords.push(...data.records)
+  if (data.prosthetics) newProsthetics.push(...data.prosthetics)
+  return { records: newRecords, prosthetics: newProsthetics }
+}
+
+export async function saveToSupabase(uid, { records, prosthetics, debts, config, appointments }, showOl = false) {
+  const ops = []
+  const monthsToSave = showOl
+    ? [...new Set([...records.map(r => monthOf(r.date)), ...prosthetics.map(p => monthOf(p.date))])].filter(Boolean)
+    : [..._dirtyMonths]
+
+  const allKnown = [...new Set([..._knownMonths, ...monthsToSave])].filter(Boolean).sort()
+  ops.push(sbUpsert(uid, 'index', '', { months: allKnown }))
+
+  for (const m of monthsToSave) {
+    ops.push(sbUpsert(uid, 'month', m, buildMonthDoc(m, records, prosthetics)))
+    _knownMonths.add(m)
+  }
+
+  if (showOl || _debtsDirty) {
+    ops.push(sbUpsert(uid, 'debts', '', debts))
+    _debtsDirty = false
+  }
+
+  if (showOl || _apptsDirty) {
+    ops.push(sbUpsert(uid, 'appointments', '', appointments))
+    _apptsDirty = false
+  }
+
+  ops.push(sbUpsert(uid, 'config', '', config))
+  _dirtyMonths.clear()
 
   try {
-    if (onProgress) onProgress(0)
-    const ops = []
-
-    const monthsToSave = showOl
-      ? [...new Set([
-          ...records.map(r => monthOf(r.date)),
-          ...prosthetics.map(p => monthOf(p.date))
-        ])].filter(Boolean)
-      : [...dirtyMonths].filter(Boolean)
-
-    monthsToSave.forEach(m => {
-      ops.push(sbUpsert(userId, 'months', m, buildMonthDoc(records, prosthetics, m)))
-      knownMonths.add(m)
-    })
-
-    const allKnown = [...new Set([...knownMonths, ...monthsToSave])].filter(Boolean).sort()
-    ops.push(sbUpsert(userId, 'months_idx', '', { months: allKnown, _mod: Date.now() }))
-
-    if (onProgress) onProgress(50)
-
-    if (showOl || debtsDirty) {
-      ops.push(sbUpsert(userId, 'debts', '', { debts, _mod: Date.now() }))
-    }
-    if (showOl || apptsDirty) {
-      ops.push(sbUpsert(userId, 'appointments', '', { items: appointments, _mod: Date.now() }))
-    }
-    ops.push(sbUpsert(userId, 'config', '', cfg))
-
-    if (onProgress) onProgress(80)
     await Promise.all(ops)
-    if (onProgress) onProgress(100)
     return true
   } catch (e) {
-    console.error('[SB] save:', e)
+    console.error('[Sync] save error:', e)
     return false
   }
 }
 
-/**
- * Load data from Supabase
- */
-export async function loadFromSupabase(userId, { records, prosthetics, cfg, knownMonths, onProgress }) {
-  if (!userId) return null
+export async function loadFromSupabase(uid) {
+  const results = {
+    records: [],
+    prosthetics: [],
+    debts: [],
+    config: null,
+    appointments: [],
+  }
 
   try {
-    if (onProgress) onProgress(20)
+    const [index, debtsData, apptsData, cfgData] = await Promise.all([
+      sbGet(uid, 'index', ''),
+      sbGet(uid, 'debts', ''),
+      sbGet(uid, 'appointments', ''),
+      sbGet(uid, 'config', ''),
+    ])
 
-    const cfgData = await sbGet(userId, 'config', '')
-    const mergedCfg = cfgData ? { ...cfg, ...cfgData } : cfg
+    if (debtsData) results.debts = debtsData
+    if (apptsData) results.appointments = apptsData
+    if (cfgData) results.config = cfgData
 
-    if (onProgress) onProgress(35)
+    const months = index?.months || []
+    months.forEach(m => _knownMonths.add(m))
 
-    const debtsData = await sbGet(userId, 'debts', '')
-    const debts = debtsData ? (debtsData.debts || []) : []
+    const monthOps = months.map(m => sbGet(uid, 'month', m))
+    const monthResults = await Promise.all(monthOps)
 
-    const apptData = await sbGet(userId, 'appointments', '')
-    const appointments = apptData ? (apptData.items || []) : []
-
-    if (onProgress) onProgress(50)
-
-    const curMonth = new Date().toISOString().substring(0, 7)
-    const curData = await sbGet(userId, 'months', curMonth)
-
-    let mergedRecords = [...records]
-    let mergedProsthetics = [...prosthetics]
-
-    if (curData) {
-      mergedRecords = mergedRecords.filter(r => monthOf(r.date) !== curMonth)
-      mergedProsthetics = mergedProsthetics.filter(p => monthOf(p.date) !== curMonth)
-      mergedRecords.push(...(curData.records || []))
-      mergedProsthetics.push(...(curData.prosthetics || []))
-    }
-
-    const idxData = await sbGet(userId, 'months_idx', '')
-    const newKnownMonths = new Set(knownMonths)
-    if (idxData) {
-      const idxMonths = idxData.months || []
-      idxMonths.forEach(m => {
-        if (m !== curMonth && !newKnownMonths.has(m)) newKnownMonths.add(m)
-      })
-    }
-
-    if (onProgress) onProgress(90)
-
-    return {
-      cfg: mergedCfg,
-      debts,
-      appointments,
-      records: mergedRecords,
-      prosthetics: mergedProsthetics,
-      knownMonths: newKnownMonths
-    }
+    monthResults.forEach(data => {
+      if (data) {
+        if (data.records) results.records.push(...data.records)
+        if (data.prosthetics) results.prosthetics.push(...data.prosthetics)
+      }
+    })
   } catch (e) {
-    console.error('[SB] load:', e)
-    return null
+    console.error('[Sync] load error:', e)
   }
+
+  return results
 }
 
-/**
- * Setup Supabase Realtime subscription for user data changes
- */
-export function setupRealtime(userId, onChange) {
-  if (!userId) return null
+export function setupRealtimeSubscriptions(uid, onUpdate) {
+  const unsubs = []
 
-  const channel = SB.channel('user_data_' + userId)
-    .on('postgres_changes', {
-      event: '*',
-      schema: 'public',
-      table: 'user_data',
-      filter: 'user_id=eq.' + userId
-    }, payload => {
-      onChange(payload)
-    })
-    .subscribe(status => {
-      if (status !== 'SUBSCRIBED') console.warn('[RT]', status)
-    })
+  const channel = supabase
+    .channel('user_data_changes')
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'user_data',
+        filter: `user_id=eq.${uid}`,
+      },
+      (payload) => {
+        onUpdate(payload)
+      },
+    )
+    .subscribe()
 
-  return channel
+  unsubs.push(() => supabase.removeChannel(channel))
+  return unsubs
 }
 
-/**
- * Remove a realtime channel
- */
-export function clearRealtime(channel) {
-  if (channel) {
-    SB.removeChannel(channel)
-  }
+export function clearRealtimeSubscriptions(unsubs) {
+  unsubs.forEach(fn => fn())
 }

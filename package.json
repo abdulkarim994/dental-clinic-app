@@ -1,5 +1,5 @@
 {
-  "name": "dental-clinic",
+  "name": "dental-clinic-app",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -14,8 +14,7 @@
     "@supabase/supabase-js": "^2.105.4",
     "pinia": "^3.0.4",
     "vue": "^3.5.32",
-    "vue-router": "^4.6.4",
-    "xlsx": "^0.18.5"
+    "vue-router": "^4.6.4"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.0",
