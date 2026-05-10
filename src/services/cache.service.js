@@ -1,100 +1,50 @@
-/**
- * Cache Service — localStorage persistence layer
- * Handles saving/loading app state to localStorage
- */
+const PREFIX = 'dental_'
 
-function cacheKey(userId, type) {
-  return `dental_${userId}_${type}`
+function key(uid, type) {
+  return `${PREFIX}${uid}_${type}`
 }
 
-/**
- * Save all app state to localStorage
- */
-export function cacheSave(userId, { records, prosthetics, debts, cfg, appointments }) {
+export function cacheGet(uid, type) {
   try {
-    localStorage.setItem(cacheKey(userId, 'rec'), JSON.stringify(records))
-    localStorage.setItem(cacheKey(userId, 'pro'), JSON.stringify(prosthetics))
-    localStorage.setItem(cacheKey(userId, 'dbt'), JSON.stringify(debts))
-    localStorage.setItem(cacheKey(userId, 'cfg'), JSON.stringify(cfg))
-    localStorage.setItem(cacheKey(userId, 'appt'), JSON.stringify(appointments))
-  } catch (e) {
-    console.error('LS save:', e)
+    const raw = localStorage.getItem(key(uid, type))
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
   }
 }
 
-/**
- * Load app state from localStorage
- */
-export function cacheLoad(userId, defaultCfg) {
+export function cacheSet(uid, type, data) {
   try {
-    const r = localStorage.getItem(cacheKey(userId, 'rec'))
-    const p = localStorage.getItem(cacheKey(userId, 'pro'))
-    const d = localStorage.getItem(cacheKey(userId, 'dbt'))
-    const c = localStorage.getItem(cacheKey(userId, 'cfg'))
-    const a = localStorage.getItem(cacheKey(userId, 'appt'))
-
-    return {
-      records: r ? (JSON.parse(r) || []) : [],
-      prosthetics: p ? (JSON.parse(p) || []) : [],
-      debts: d ? (JSON.parse(d) || []) : [],
-      cfg: c ? { ...defaultCfg, ...JSON.parse(c) } : { ...defaultCfg },
-      appointments: a ? (JSON.parse(a) || []) : []
-    }
+    localStorage.setItem(key(uid, type), JSON.stringify(data))
   } catch (e) {
-    console.error('LS load:', e)
-    return { records: [], prosthetics: [], debts: [], cfg: { ...defaultCfg }, appointments: [] }
+    console.warn('[Cache] Storage full or unavailable:', e)
   }
 }
 
-/**
- * Get/set fast mode flag
- */
-export function getFastMode() {
-  return localStorage.getItem('dental_fastMode') === '1'
+export function cacheClear(uid) {
+  const prefix = `${PREFIX}${uid}_`
+  const keys = []
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i)
+    if (k && k.startsWith(prefix)) keys.push(k)
+  }
+  keys.forEach(k => localStorage.removeItem(k))
 }
 
-export function setFastMode(enabled) {
-  localStorage.setItem('dental_fastMode', enabled ? '1' : '0')
-}
-
-/**
- * Get/set theme preference
- */
-export function getTheme() {
-  return localStorage.getItem('dental_theme') || 'dark'
-}
-
-export function setTheme(theme) {
-  localStorage.setItem('dental_theme', theme)
-}
-
-/**
- * Get/set font size preference
- */
-export function getFontSize() {
-  return localStorage.getItem('dental_fontSize') || 'fs-medium'
-}
-
-export function setFontSize(cls) {
-  localStorage.setItem('dental_fontSize', cls)
-}
-
-/**
- * Save/load login credentials (remember me)
- */
-export function saveCredentials(email, password) {
-  localStorage.setItem('dental_rem_email', email)
-  localStorage.setItem('dental_rem_pass', password)
-}
-
-export function loadCredentials() {
+export function cacheGetAll(uid) {
   return {
-    email: localStorage.getItem('dental_rem_email') || '',
-    password: localStorage.getItem('dental_rem_pass') || ''
+    records: cacheGet(uid, 'rec') || [],
+    prosthetics: cacheGet(uid, 'pro') || [],
+    debts: cacheGet(uid, 'dbt') || [],
+    config: cacheGet(uid, 'cfg'),
+    appointments: cacheGet(uid, 'appt') || [],
   }
 }
 
-export function clearCredentials() {
-  localStorage.removeItem('dental_rem_email')
-  localStorage.removeItem('dental_rem_pass')
+export function cacheSaveAll(uid, { records, prosthetics, debts, config, appointments }) {
+  if (records) cacheSet(uid, 'rec', records)
+  if (prosthetics) cacheSet(uid, 'pro', prosthetics)
+  if (debts) cacheSet(uid, 'dbt', debts)
+  if (config) cacheSet(uid, 'cfg', config)
+  if (appointments) cacheSet(uid, 'appt', appointments)
 }

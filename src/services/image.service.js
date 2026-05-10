@@ -1,87 +1,57 @@
-/**
- * Image Service — handles image compression, thumbnails, and lazy loading
- */
+import { r2Url, uploadImage, deleteImage, compressImage, createThumbnail } from './r2.service'
 
-/**
- * Compress an image file before upload
- * @param {File} file - The image file to compress
- * @param {number} maxWidth - Max width in pixels
- * @param {number} quality - JPEG quality (0-1)
- * @returns {Promise<Blob>} Compressed image blob
- */
-export function compressImage(file, maxWidth = 1200, quality = 0.8) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      const img = new Image()
-      img.onload = () => {
-        const canvas = document.createElement('canvas')
-        let width = img.width
-        let height = img.height
+const _imageCache = new Map()
+const MAX_CACHE_SIZE = 100
 
-        if (width > maxWidth) {
-          height = Math.round(height * maxWidth / width)
-          width = maxWidth
-        }
-
-        canvas.width = width
-        canvas.height = height
-        const ctx = canvas.getContext('2d')
-        ctx.drawImage(img, 0, 0, width, height)
-
-        canvas.toBlob(blob => {
-          if (blob) resolve(blob)
-          else reject(new Error('Compression failed'))
-        }, 'image/jpeg', quality)
-      }
-      img.onerror = reject
-      img.src = e.target.result
-    }
-    reader.onerror = reject
-    reader.readAsDataURL(file)
-  })
+function evictOldest() {
+  if (_imageCache.size <= MAX_CACHE_SIZE) return
+  const oldest = _imageCache.keys().next().value
+  _imageCache.delete(oldest)
 }
 
-/**
- * Create a thumbnail from an image file
- * @param {File|Blob} file - Source image
- * @param {number} size - Thumbnail dimension
- * @returns {Promise<string>} Base64 data URL
- */
-export function createThumbnail(file, size = 80) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      const img = new Image()
-      img.onload = () => {
-        const canvas = document.createElement('canvas')
-        canvas.width = size
-        canvas.height = size
-        const ctx = canvas.getContext('2d')
-
-        const min = Math.min(img.width, img.height)
-        const sx = (img.width - min) / 2
-        const sy = (img.height - min) / 2
-        ctx.drawImage(img, sx, sy, min, min, 0, 0, size, size)
-
-        resolve(canvas.toDataURL('image/jpeg', 0.6))
-      }
-      img.onerror = reject
-      img.src = e.target.result
-    }
-    reader.onerror = reject
-    reader.readAsDataURL(file)
-  })
+export function getCachedImageUrl(key) {
+  return _imageCache.get(key)
 }
 
-/**
- * Convert file to base64 data URL
- */
-export function fileToBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(reader.result)
-    reader.onerror = reject
-    reader.readAsDataURL(file)
-  })
+export function getImageUrl(key) {
+  if (_imageCache.has(key)) return _imageCache.get(key)
+  const url = r2Url(key)
+  _imageCache.set(key, url)
+  evictOldest()
+  return url
+}
+
+export async function uploadXrayImage(file, patientName, uid) {
+  const compressed = await compressImage(file, 1600, 0.85)
+  const key = `xray/${uid}/${patientName}/${Date.now()}_${file.name}`
+  await uploadImage(compressed, key)
+  return key
+}
+
+export async function uploadThumbnailImage(file, patientName, uid) {
+  const thumb = await createThumbnail(file)
+  const key = `thumb/${uid}/${patientName}/${Date.now()}_${file.name}`
+  await uploadImage(thumb, key)
+  return key
+}
+
+export async function deleteXrayImage(key) {
+  _imageCache.delete(key)
+  await deleteImage(key)
+}
+
+export function getPatientPhotoFromStorage(name) {
+  try {
+    return localStorage.getItem(`dental_photo_${name}`) || null
+  } catch {
+    return null
+  }
+}
+
+export function savePatientPhotoToStorage(name, dataUrl) {
+  try {
+    localStorage.setItem(`dental_photo_${name}`, dataUrl)
+  } catch {
+    console.warn('[Image] Cannot save patient photo to storage')
+  }
 }

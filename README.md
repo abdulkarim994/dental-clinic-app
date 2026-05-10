@@ -1,99 +1,84 @@
-# طب الأسنان الرقمي — Dental Clinic Management System
+# طب الأسنان الرقمي — Dental Clinic App
 
-نظام إدارة عيادات الأسنان المتكامل — مبني بـ Vue 3 + Vite + Capacitor.
+نظام إدارة عيادات الأسنان المتكامل — مبني بـ Vue 3 + Vite + Capacitor
 
-## 🏗️ البنية المعمارية
+## المعمارية / Architecture
 
 ```
 src/
-├── components/          # Vue components
-│   ├── layout/          # AppHeader, AppNav
-│   └── shared/          # SyncOverlay, ToastNotification
-├── composables/         # useSync, useToast (shared logic)
-├── modules/             # Feature modules (future expansion)
-├── pages/               # Route pages
-│   ├── LoginPage.vue
-│   ├── AddPage.vue
-│   ├── RecordsPage.vue
-│   ├── TreasuryPage.vue
-│   ├── ArchivePage.vue
-│   ├── DebtsPage.vue
-│   ├── ProfitsPage.vue
-│   ├── PatientsPage.vue
-│   └── CalendarPage.vue
-├── router/              # Vue Router config
-├── services/            # Business services
-│   ├── supabase.service.js
-│   ├── r2.service.js
-│   ├── auth.service.js
-│   ├── sync.service.js
-│   ├── cache.service.js
-│   └── image.service.js
-├── stores/              # Pinia state management
-│   ├── auth.store.js
-│   ├── config.store.js
-│   ├── records.store.js
-│   ├── debts.store.js
-│   ├── appointments.store.js
-│   └── ui.store.js
-├── styles/              # Modular CSS
-│   ├── variables.css
-│   ├── base.css
-│   ├── components.css
-│   ├── modals.css
-│   ├── animations.css
-│   ├── navigation.css
-│   ├── login.css
-│   ├── light-mode.css
-│   └── index.css
-├── utils/               # Helpers, icons, defaults
-├── App.vue              # Root component
-└── main.js              # Entry point
+  assets/styles/       # Global CSS (Glassmorphism, theme, variables)
+  components/          # Shared UI components
+    icons/             # SVG icon components (functional)
+  composables/         # Vue composables (useToast, useTheme)
+  modules/             # Feature modules (lazy-loaded)
+    patients/          # ✅ Patients module (POC - fully converted)
+    appointments/      # 🔄 Placeholder
+    debts/             # 🔄 Placeholder
+    records/           # 🔄 Placeholder
+    reports/           # 🔄 Placeholder
+    xrays/             # 🔄 Placeholder
+    settings/          # 🔄 Placeholder
+    sync/              # 🔄 Placeholder
+    treatments/        # 🔄 Placeholder
+    prosthetics/       # 🔄 Placeholder
+    treasury/          # 🔄 Placeholder
+    archive/           # 🔄 Placeholder
+    profits/           # 🔄 Placeholder
+    calendar/          # 🔄 Placeholder
+  pages/               # Page-level components (LoginPage, AppShell)
+  router/              # Vue Router with lazy loading
+  services/            # Service layer
+    supabase.service   # Supabase client + retry + dedup
+    r2.service         # Cloudflare R2 image management
+    auth.service       # Authentication
+    sync.service       # Data sync (Supabase ↔ local)
+    cache.service      # localStorage cache
+    image.service      # Image processing + caching
+  stores/              # Pinia stores
+    auth.store         # Auth state
+    app.store          # App-wide state (records, debts, config)
+    patients.store     # Patient-specific computed data
+  utils/               # Utility functions
+    format             # Number/date formatting
+    search             # Arabic fuzzy search
+    debounce           # Debounce/throttle
 ```
 
-## 🚀 التشغيل
+## التشغيل / Development
 
 ```bash
-# تثبيت الحزم
 npm install
-
-# تشغيل خادم التطوير
 npm run dev
-
-# بناء الإنتاج
-npm run build
-
-# معاينة البناء
-npm run preview
 ```
 
-## 📱 Capacitor (Android / Windows)
+## البناء / Build
 
 ```bash
-# إضافة منصة Android
-npx cap add android
-
-# إضافة منصة Electron (Windows)
-npx cap add @nickvdl/capacitor-electron
-
-# بناء + مزامنة
-npm run build && npx cap sync
+npm run build
 ```
 
-## ⚡ التقنيات
+## Capacitor (Android/Windows)
 
-- **Vue 3** — Composition API
-- **Vite** — Build tooling
+```bash
+npm run build
+npx cap sync
+npx cap open android
+```
+
+## التقنيات / Tech Stack
+
+- **Vue 3.5+** — Composition API, `<script setup>`
+- **Vite 8+** — Fast dev/build
 - **Pinia** — State management
-- **Vue Router** — Navigation (hash-based)
-- **Supabase** — Backend + Auth + Realtime
-- **Cloudflare R2** — X-ray image storage
-- **Capacitor** — Native mobile/desktop
-- **XLSX** — Excel export
+- **Vue Router 4** — Lazy-loaded routes
+- **Supabase** — Auth + Database
+- **Cloudflare R2** — Image storage
+- **Capacitor 7** — Native mobile/desktop
+- **Tailwind CSS 4** — Utility-first CSS
 
-## 🔒 الأمان
+## القواعد / Guidelines
 
-- Auth persistence via Supabase session
-- Token refresh on visibility change
-- localStorage caching with user-scoped keys
-- Offline-first with background sync
+- **لا تحذف ميزة تعمل حاليًا**
+- **لا تغيّر التصميم أو الألوان**
+- **Migration تدريجي — موديول واحد في كل مرة**
+- **التطبيق يجب أن يعمل بعد كل خطوة**
