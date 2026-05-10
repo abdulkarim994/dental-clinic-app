@@ -108,6 +108,10 @@
             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:-2px"><polyline points="20 6 9 17 4 12"/></svg>
             حفظ التقرير
           </button>
+          <button v-if="entries.length" @click="printReport" class="btn-o w-full py-3 text-xs flex items-center justify-center gap-2">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            طباعة التقرير
+          </button>
         </div>
       </div>
     </div>
@@ -129,7 +133,7 @@ const props = defineProps({
   patientName: { type: String, default: '' },
   patientPhone: { type: String, default: '' },
 })
-const emit = defineEmits(['update:modelValue', 'update:reportMeta', 'close', 'confirm', 'update-amount'])
+const emit = defineEmits(['update:modelValue', 'update:reportMeta', 'close', 'confirm', 'update-amount', 'print-report'])
 const app = useAppStore()
 const { toast } = useToast()
 
@@ -221,6 +225,71 @@ function addEntry() {
 }
 
 function removeEntry(idx) { entries.value.splice(idx, 1) }
+
+function printReport() {
+  const center = app.centerName || 'عيادة الأسنان'
+  const today = new Date().toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' })
+  const name = meta.value.name || props.patientName || '—'
+  const cur = props.currency
+
+  const infoRows = [
+    meta.value.age ? `<span><b>العمر:</b> ${meta.value.age}</span>` : '',
+    meta.value.gender ? `<span><b>الجنس:</b> ${meta.value.gender}</span>` : '',
+    meta.value.phone || props.patientPhone ? `<span><b>الهاتف:</b> ${meta.value.phone || props.patientPhone}</span>` : '',
+    meta.value.diagnosis ? `<span><b>التشخيص:</b> ${meta.value.diagnosis}</span>` : '',
+    meta.value.conditions?.length ? `<span><b>الحالات:</b> ${meta.value.conditions.join('، ')}</span>` : '',
+  ].filter(Boolean).join(' &nbsp;|&nbsp; ')
+
+  let rows = ''
+  entries.value.forEach((e, i) => {
+    const teeth = e.teeth?.map(t => `${t.q}${t.n}`).join(', ') || '—'
+    const bg = i % 2 === 0 ? '#fff' : '#f8faff'
+    rows += `<tr style="background:${bg}">
+      <td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;text-align:center;font-size:11px">${i + 1}</td>
+      <td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;font-weight:700">${e.service || '—'}</td>
+      <td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;text-align:center;font-size:11px">${teeth}</td>
+      <td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;text-align:center;font-weight:700;color:#1d4ed8">${n(e.cost || 0)} ${cur}</td>
+    </tr>`
+  })
+
+  const html = `
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+</style>
+<div style="font-family:'Cairo',Arial,sans-serif;direction:rtl;background:#f1f5f9;padding:16px">
+  <div style="background:#fff;max-width:700px;margin:0 auto;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.12)">
+    <div style="height:6px;background:linear-gradient(90deg,#1d4ed8,#3b82f6,#60a5fa)"></div>
+    <div style="padding:18px 24px;border-bottom:1.5px solid #e2e8f0;text-align:center">
+      <div style="font-size:20px;font-weight:900;color:#1d4ed8">${center}</div>
+      <div style="font-size:10px;color:#94a3b8;margin-top:2px">${today}</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;background:#1d4ed8;color:#fff;padding:7px 16px;font-size:11px;font-weight:700">
+      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M12 2C8.5 2 7 4.5 7 7c0 3 1.5 6 2 9 .3 2 .7 4 1 5h4c.3-1 .7-3 1-5 .5-3 2-6 2-9 0-2.5-1.5-5-5-5z"/></svg>
+      تقرير الأسنان — ${name}
+    </div>
+    ${infoRows ? `<div style="padding:10px 20px;font-size:10px;color:#475569;background:#f8faff">${infoRows}</div>` : ''}
+    <div style="padding:14px 20px">
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="background:#0f172a;color:#fff">
+          <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;border-radius:0 8px 0 0">#</th>
+          <th style="padding:8px 10px;text-align:right;font-size:10px;font-weight:700">الخدمة</th>
+          <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700">الأسنان</th>
+          <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;border-radius:8px 0 0 0">التكلفة</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+        <tfoot><tr style="background:#eef3fb">
+          <td colspan="3" style="padding:10px;font-weight:900;font-size:13px;text-align:right">الإجمالي</td>
+          <td style="padding:10px;font-weight:900;font-size:13px;text-align:center;color:#1d4ed8">${n(totalCost.value)} ${cur}</td>
+        </tr></tfoot>
+      </table>
+    </div>
+    ${meta.value.notes ? `<div style="padding:10px 20px;font-size:10px;color:#475569;background:#f8faff;border-top:1px solid #e2e8f0"><b>ملاحظات:</b> ${meta.value.notes}</div>` : ''}
+  </div>
+</div>`
+
+  emit('print-report', { title: `تقرير الأسنان — ${name}`, html })
+}
 
 function toggleTooth(q, tn) {
   const key = `${q}:${tn}`

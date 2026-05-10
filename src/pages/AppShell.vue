@@ -63,6 +63,7 @@
   <SyncOverlay />
   <ToastNotification />
   <SettingsModal :visible="showSettings" @close="showSettings = false" />
+  <AppointmentNotification />
 </template>
 
 <script setup>
@@ -86,6 +87,7 @@ import IconCalendar from '@/components/icons/IconCalendar.vue'
 import SyncOverlay from '@/components/SyncOverlay.vue'
 import ToastNotification from '@/components/ToastNotification.vue'
 import SettingsModal from '@/components/SettingsModal.vue'
+import AppointmentNotification from '@/components/AppointmentNotification.vue'
 
 const router = useRouter()
 const route = useRoute()

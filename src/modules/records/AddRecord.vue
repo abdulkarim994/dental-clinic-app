@@ -155,6 +155,15 @@
         @confirm="onReportConfirm"
         @close="showReportModal = false"
         @update-amount="form.amount = $event"
+        @print-report="onPrintDentalReport"
+      />
+
+      <!-- Dental Report Print Overlay -->
+      <PrintOverlay
+        :visible="dentalPrintVisible"
+        :title="dentalPrintTitle"
+        :html="dentalPrintHtml"
+        @close="dentalPrintVisible = false"
       />
 
       <!-- Debt Toggle -->
@@ -194,6 +203,16 @@
       </button>
       <button v-if="editId" @click="resetForm" class="w-full btn-del py-2.5 text-xs rounded-xl">✕ إلغاء التعديل</button>
     </div>
+
+    <!-- WhatsApp Receipt Float -->
+    <WaReceiptFloat
+      :name="waReceipt.name"
+      :service="waReceipt.service"
+      :amount="waReceipt.amount"
+      :date="waReceipt.date"
+      :phone="waReceipt.phone"
+      :trigger="waReceipt.trigger"
+    />
   </div>
 </template>
 
@@ -208,6 +227,8 @@ import { fuzzyMatch } from '@/utils/search'
 import { markMonthDirty, markDebtsDirty } from '@/services/sync.service'
 import { sum, isProsDebtPay, prosDocEarnings, n } from '@/utils/helpers'
 import ToothReport from './components/ToothReport.vue'
+import WaReceiptFloat from '@/components/WaReceiptFloat.vue'
+import PrintOverlay from '@/components/PrintOverlay.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -226,6 +247,17 @@ const reportEntries = ref([])
 const reportMeta = ref({})
 
 const reportTotal = computed(() => reportEntries.value.reduce((s, e) => s + (+e.cost || 0), 0))
+
+const waReceipt = ref({ name: '', service: '', amount: 0, date: '', phone: '', trigger: 0 })
+
+const dentalPrintVisible = ref(false)
+const dentalPrintTitle = ref('')
+const dentalPrintHtml = ref('')
+function onPrintDentalReport({ title, html }) {
+  dentalPrintTitle.value = title
+  dentalPrintHtml.value = html
+  dentalPrintVisible.value = true
+}
 
 function onReportConfirm() {
   hasReport.value = reportEntries.value.length > 0
@@ -557,8 +589,25 @@ async function saveRec() {
   markDebtsDirty()
   app.saveToCache(uid)
   app.syncSave(uid, false)
+
+  const savedPhone = form.value.phone || ''
+  const savedName = name.trim()
+  const savedService = service
+  const savedAmount = amount
+  const savedDate = date
+
   resetForm()
   toast('✅ تم الحفظ بنجاح')
+
+  if (savedPhone) {
+    waReceipt.name = savedName
+    waReceipt.service = savedService
+    waReceipt.amount = savedAmount
+    waReceipt.date = savedDate
+    waReceipt.phone = savedPhone
+    waReceipt.trigger = Date.now()
+  }
+
   saving.value = false
 }
 

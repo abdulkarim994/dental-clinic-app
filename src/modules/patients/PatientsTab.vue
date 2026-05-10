@@ -42,6 +42,10 @@
       @edit="editPatientName"
       @delete="deletePatient"
       @settle-debt="settleDebt"
+      @xray-upload="onXrayUpload"
+      @xray-delete="onXrayDelete"
+      @xray-view="openXrayViewer"
+      @wa-templates="openWaTemplates"
     />
 
     <!-- Treatment Plan Modal -->
@@ -107,6 +111,24 @@
       </div>
     </Teleport>
 
+    <!-- X-ray Viewer -->
+    <XrayViewer
+      :visible="xrayViewerVisible"
+      :images="xrayViewerImages"
+      :start-index="xrayViewerIndex"
+      :patient-name="xrayViewerPatient"
+      @close="xrayViewerVisible = false"
+      @delete="onXrayDeleteFromViewer"
+    />
+
+    <!-- WhatsApp Templates Popup -->
+    <WaTemplatesPopup
+      :visible="waPopupVisible"
+      :patient-name="waPopupName"
+      :phone="waPopupPhone"
+      @close="waPopupVisible = false"
+    />
+
     <!-- Patient Print Overlay -->
     <PrintOverlay
       :visible="printVisible"
@@ -138,6 +160,9 @@ import { useAuthStore } from '@/stores/auth.store'
 import PatientCard from './components/PatientCard.vue'
 import PrintOverlay from '@/components/PrintOverlay.vue'
 import DebtPayPopup from '@/components/DebtPayPopup.vue'
+import XrayViewer from '@/components/XrayViewer.vue'
+import WaTemplatesPopup from '@/components/WaTemplatesPopup.vue'
+import { deleteXrayImage } from '@/services/image.service'
 
 const patientsStore = usePatientsStore()
 const app = useAppStore()
@@ -470,5 +495,71 @@ function settleDebt(name) {
 function onDebtPaid() {
   debtPayVisible.value = false
   debtPayTarget.value = null
+}
+
+/* ── 9. X-RAY MANAGEMENT ── */
+const xrayViewerVisible = ref(false)
+const xrayViewerImages = ref([])
+const xrayViewerIndex = ref(0)
+const xrayViewerPatient = ref('')
+
+function onXrayUpload(name, imgData) {
+  if (!app.config.patientXrays) app.config.patientXrays = {}
+  if (!app.config.patientXrays[name]) app.config.patientXrays[name] = []
+  app.config.patientXrays[name].push(imgData)
+  app.saveToCache(auth.uid)
+  app.syncSave(auth.uid, false)
+}
+
+async function onXrayDelete(name, idx) {
+  if (!app.config.patientXrays || !app.config.patientXrays[name]) return
+  if (!confirm('حذف صورة الأشعة؟')) return
+  const img = app.config.patientXrays[name][idx]
+  if (img && img.key) {
+    try { await deleteXrayImage(img.key) } catch (e) { console.error('[R2] delete:', e) }
+  }
+  app.config.patientXrays[name].splice(idx, 1)
+  if (!app.config.patientXrays[name].length) delete app.config.patientXrays[name]
+  app.saveToCache(auth.uid)
+  app.syncSave(auth.uid, false)
+  toast('تم حذف صورة الأشعة')
+}
+
+function openXrayViewer(name, idx) {
+  const imgs = (app.config.patientXrays && app.config.patientXrays[name]) || []
+  if (!imgs.length) return
+  xrayViewerPatient.value = name
+  xrayViewerImages.value = imgs
+  xrayViewerIndex.value = idx
+  xrayViewerVisible.value = true
+}
+
+async function onXrayDeleteFromViewer(idx) {
+  const name = xrayViewerPatient.value
+  if (!app.config.patientXrays || !app.config.patientXrays[name]) return
+  const img = app.config.patientXrays[name][idx]
+  if (img && img.key) {
+    try { await deleteXrayImage(img.key) } catch (e) { console.error('[R2] delete:', e) }
+  }
+  app.config.patientXrays[name].splice(idx, 1)
+  if (!app.config.patientXrays[name].length) {
+    delete app.config.patientXrays[name]
+    xrayViewerVisible.value = false
+  }
+  xrayViewerImages.value = (app.config.patientXrays && app.config.patientXrays[name]) || []
+  app.saveToCache(auth.uid)
+  app.syncSave(auth.uid, false)
+  toast('تم حذف صورة الأشعة')
+}
+
+/* ── 10. WHATSAPP TEMPLATES POPUP ── */
+const waPopupVisible = ref(false)
+const waPopupName = ref('')
+const waPopupPhone = ref('')
+
+function openWaTemplates(name, phone) {
+  waPopupName.value = name
+  waPopupPhone.value = phone
+  waPopupVisible.value = true
 }
 </script>

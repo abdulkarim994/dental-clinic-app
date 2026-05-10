@@ -134,6 +134,25 @@
         <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:-2px"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
         واتساب
       </a>
+      <button
+        class="whatsapp-btn flex-1 justify-center py-1.5"
+        style="background:rgba(37,211,102,.08);border-color:rgba(37,211,102,.2)"
+        @click.prevent="$emit('wa-templates', patient.name, waPhone)"
+      >
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:-2px"><rect x="5" y="3" width="14" height="18" rx="3"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
+        قوالب
+      </button>
+    </div>
+
+    <!-- X-ray Gallery -->
+    <div v-if="xrayImages.length || showingDetail" class="space-y-2 pt-1 border-t border-white/10">
+      <XrayGallery
+        :images="xrayImages"
+        :patient-name="patient.name"
+        @upload="$emit('xray-upload', patient.name, $event)"
+        @delete="$emit('xray-delete', patient.name, $event)"
+        @open-viewer="$emit('xray-view', patient.name, $event)"
+      />
     </div>
 
     <!-- Detail section (collapsible) -->
@@ -164,6 +183,7 @@ import { formatNumber } from '@/utils/format'
 import IconRecords from '@/components/icons/IconRecords.vue'
 import IconAdd from '@/components/icons/IconAdd.vue'
 import IconDebts from '@/components/icons/IconDebts.vue'
+import XrayGallery from '@/components/XrayGallery.vue'
 
 const props = defineProps({
   patient: { type: Object, required: true },
@@ -172,6 +192,7 @@ const props = defineProps({
 defineEmits([
   'add-visit', 'open-detail', 'open-report', 'open-treatment',
   'print', 'edit', 'delete', 'settle-debt', 'openPhoto',
+  'xray-upload', 'xray-delete', 'xray-view', 'wa-templates',
 ])
 
 const patientsStore = usePatientsStore()
@@ -193,4 +214,8 @@ const moreServices = computed(() => Math.max(0, props.patient.services.size - 3)
 
 const waPhone = computed(() => patientsStore.getPatientPhone(props.patient.name))
 const waMsg = computed(() => encodeURIComponent(`السلام عليكم ${props.patient.name}, هذا تذكير من العيادة`))
+const xrayImages = computed(() => {
+  const xrays = appStore.config.patientXrays
+  return (xrays && xrays[props.patient.name]) || []
+})
 </script>

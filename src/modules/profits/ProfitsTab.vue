@@ -53,6 +53,19 @@
       </div>
     </div>
 
+    <!-- Annual Print -->
+    <button @click="printAnnual" class="btn-o w-full py-2.5 text-xs flex items-center justify-center gap-2">
+      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+      طباعة التقرير السنوي {{ selectedYear }}
+    </button>
+
+    <PrintOverlay
+      :visible="printVisible"
+      :title="printTitle"
+      :html="printHtml"
+      @close="printVisible = false"
+    />
+
     <!-- Monthly Breakdown -->
     <div class="space-y-2">
       <span class="sec-h">التفاصيل الشهرية</span>
@@ -75,6 +88,7 @@ import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAppStore } from '@/stores/app.store'
 import { sum, isProsDebtPay, prosDocEarnings, n } from '@/utils/helpers'
+import PrintOverlay from '@/components/PrintOverlay.vue'
 
 const router = useRouter()
 const app = useAppStore()
@@ -143,5 +157,75 @@ function goArchiveMonth(m) {
   app.selectedMonth = m
   app.activeTab = 'archive'
   router.push({ name: 'archive' })
+}
+
+/* ── ANNUAL PRINT ── */
+const printVisible = ref(false)
+const printTitle = ref('')
+const printHtml = ref('')
+
+function printAnnual() {
+  const center = app.centerName || 'عيادة الأسنان'
+  const today = new Date().toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' })
+  const yr = selectedYear.value
+  const c = cur.value
+
+  let rows = ''
+  monthRows.value.forEach((row, i) => {
+    const bg = i % 2 === 0 ? '#fff' : '#f8faff'
+    rows += `<tr style="background:${bg}">
+      <td style="padding:8px 14px;border-bottom:1px solid #e2e8f0;font-weight:700;font-size:12px">${row.name}</td>
+      <td style="padding:8px 14px;border-bottom:1px solid #e2e8f0;text-align:center;font-weight:700;color:${row.total > 0 ? '#1d4ed8' : '#94a3b8'};font-size:12px">${n(row.total)} ${c}</td>
+    </tr>`
+  })
+
+  printTitle.value = `التقرير السنوي ${yr}`
+  printHtml.value = `
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+</style>
+<div style="font-family:'Cairo',Arial,sans-serif;direction:rtl;background:#f1f5f9;padding:16px">
+  <div style="background:#fff;max-width:700px;margin:0 auto;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.12)">
+    <div style="height:6px;background:linear-gradient(90deg,#1d4ed8,#3b82f6,#60a5fa)"></div>
+    <div style="padding:18px 24px;border-bottom:1.5px solid #e2e8f0;text-align:center">
+      <div style="font-size:20px;font-weight:900;color:#1d4ed8">${center}</div>
+      <div style="font-size:12px;font-weight:700;color:#64748b;margin-top:4px">التقرير السنوي — ${yr}</div>
+      <div style="font-size:10px;color:#94a3b8;margin-top:2px">${today}</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;padding:16px 24px;text-align:center">
+      <div style="background:#f0fdf4;border-radius:10px;padding:14px">
+        <div style="font-size:9px;color:#22c55e;font-weight:600">كاش</div>
+        <div style="font-size:18px;font-weight:900;color:#16a34a">${n(yearCash.value)}</div>
+        <div style="font-size:9px;color:#94a3b8">${c}</div>
+      </div>
+      <div style="background:#eff6ff;border-radius:10px;padding:14px">
+        <div style="font-size:9px;color:#3b82f6;font-weight:600">تحويل</div>
+        <div style="font-size:18px;font-weight:900;color:#2563eb">${n(yearXfer.value)}</div>
+        <div style="font-size:9px;color:#94a3b8">${c}</div>
+      </div>
+      <div style="background:#fefce8;border-radius:10px;padding:14px">
+        <div style="font-size:9px;color:#eab308;font-weight:600">تركيبات</div>
+        <div style="font-size:18px;font-weight:900;color:#ca8a04">${n(yearProsDoc.value)}</div>
+        <div style="font-size:9px;color:#94a3b8">${c}</div>
+      </div>
+    </div>
+    <div style="text-align:center;padding:10px 24px 16px;border-bottom:1px solid #e2e8f0">
+      <div style="font-size:10px;color:#94a3b8">الإجمالي السنوي</div>
+      <div style="font-size:28px;font-weight:900;color:#1d4ed8">${n(yearGrand.value)} ${c}</div>
+    </div>
+    <div style="padding:14px 20px">
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr style="background:#0f172a;color:#fff">
+          <th style="padding:8px 14px;text-align:right;font-size:11px;font-weight:700;border-radius:0 8px 0 0">الشهر</th>
+          <th style="padding:8px 14px;text-align:center;font-size:11px;font-weight:700;border-radius:8px 0 0 0">الإجمالي</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  </div>
+</div>`
+
+  printVisible.value = true
 }
 </script>
