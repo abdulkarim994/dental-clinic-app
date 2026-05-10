@@ -21,6 +21,10 @@ const DEFAULT_CONFIG = {
     { lbl: 'عرض خاص', msg: 'السلام عليكم {name}\nيسعدنا إعلامكم عن عرض خاص في {center}.\nتواصلوا معنا لمزيد من التفاصيل ✨' },
   ],
   treatmentPlans: {},
+  logo: '',
+  apptNotif: true,
+  followUpAuto: false,
+  dcConfirm: { recOn: true, recDur: 3, debtOn: true, debtDur: 3, patOn: true, patDur: 3, apptOn: true, apptDur: 3 },
 }
 
 export const useAppStore = defineStore('app', () => {

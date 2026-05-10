@@ -10,13 +10,10 @@
           <button @click="$emit('close')" class="glass-sm w-11 h-11 flex items-center justify-center text-sm">✕</button>
         </div>
 
-        <!-- GROUP 1: Center Info -->
+        <!-- ═══ GROUP 1: معلومات المركز ═══ -->
         <div class="set-group">
           <div class="set-group-head" @click="toggle('center')">
-            <div class="sg-title">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M9 8h1M9 12h1M9 16h1M14 8h1M14 12h1M14 16h1"/><path d="M5 21V5a2 2 0 012-2h10a2 2 0 012 2v16"/></svg>
-              معلومات المركز
-            </div>
+            <div class="sg-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M9 8h1M9 12h1M9 16h1M14 8h1M14 12h1M14 16h1"/><path d="M5 21V5a2 2 0 012-2h10a2 2 0 012 2v16"/></svg> معلومات المركز</div>
             <span class="sg-arr" :class="{ 'sg-open': openGroups.has('center') }">▼</span>
           </div>
           <div class="set-group-body" :class="openGroups.has('center') ? 'sg-show' : ''">
@@ -24,6 +21,20 @@
               <div class="glass p-4 space-y-3">
                 <span class="sec-h">اسم المركز</span>
                 <div class="flex gap-2"><input type="text" v-model="localCfg.centerName" class="inp flex-1 text-sm" placeholder="طب الأسنان الرقمي"><button @click="saveSetting('centerName')" class="btn-g px-4 py-2 text-xs">حفظ</button></div>
+              </div>
+              <!-- Logo upload -->
+              <div class="glass p-4 space-y-3">
+                <span class="sec-h">شعار طباعة التقرير</span>
+                <div v-if="logoPreview" class="flex items-center gap-2 p-2 rounded-xl" style="background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.15)">
+                  <img :src="logoPreview" style="max-height:44px;max-width:90px;object-fit:contain;border-radius:6px" alt="شعار">
+                  <button @click="removeLogo" class="text-[10px] px-2 py-1 rounded-lg" style="background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.25)">✕ حذف</button>
+                </div>
+                <label class="flex items-center gap-2 cursor-pointer btn-g px-3 py-2 text-xs w-full justify-center rounded-xl" style="font-family:inherit">
+                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  رفع صورة من الجهاز
+                  <input type="file" accept="image/*" class="hidden" @change="uploadLogo">
+                </label>
+                <p class="text-[9px] opacity-35">PNG/JPG/SVG — يظهر في أعلى صفحة الطباعة</p>
               </div>
               <div class="glass p-4 space-y-3">
                 <span class="sec-h">عملة الدفع</span>
@@ -37,18 +48,14 @@
           </div>
         </div>
 
-        <!-- GROUP 2: Clinics & Services -->
+        <!-- ═══ GROUP 2: العيادات والمعالجات ═══ -->
         <div class="set-group">
           <div class="set-group-head" @click="toggle('clinic')">
-            <div class="sg-title">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C8.5 2 7 4.5 7 7c0 3 1.5 6 2 9 .3 2 .7 4 1 5h4c.3-1 .7-3 1-5 .5-3 2-6 2-9 0-2.5-1.5-5-5-5z"/></svg>
-              العيادات والمعالجات
-            </div>
+            <div class="sg-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C8.5 2 7 4.5 7 7c0 3 1.5 6 2 9 .3 2 .7 4 1 5h4c.3-1 .7-3 1-5 .5-3 2-6 2-9 0-2.5-1.5-5-5-5z"/></svg> العيادات والمعالجات</div>
             <span class="sg-arr" :class="{ 'sg-open': openGroups.has('clinic') }">▼</span>
           </div>
           <div class="set-group-body" :class="openGroups.has('clinic') ? 'sg-show' : ''">
             <div class="set-group-body-inner">
-              <!-- Clinics -->
               <div class="glass p-4 space-y-3">
                 <span class="sec-h">العيادات</span>
                 <div class="space-y-1">
@@ -59,7 +66,6 @@
                 </div>
                 <div class="flex gap-2 mt-2"><input type="text" v-model="newClinic" class="inp flex-1 text-sm" placeholder="اسم عيادة جديدة"><button @click="addItem('clinics', newClinic); newClinic = ''" class="btn-g px-3 py-2 text-xs">+ إضافة</button></div>
               </div>
-              <!-- Services -->
               <div class="glass p-4 space-y-3">
                 <span class="sec-h">المعالجات</span>
                 <div class="space-y-1">
@@ -73,7 +79,6 @@
                 </div>
                 <div class="flex gap-2 mt-2"><input type="text" v-model="newService" class="inp flex-1 text-sm" placeholder="اسم معالجة جديدة"><button @click="addItem('services', newService); newService = ''" class="btn-g px-3 py-2 text-xs">+ إضافة</button></div>
               </div>
-              <!-- Payments -->
               <div class="glass p-4 space-y-3">
                 <span class="sec-h">طرق الدفع</span>
                 <div class="space-y-1">
@@ -88,13 +93,61 @@
           </div>
         </div>
 
-        <!-- GROUP 3: Appearance -->
+        <!-- ═══ GROUP 3: الحماية والتأكيدات ═══ -->
+        <div class="set-group">
+          <div class="set-group-head" @click="toggle('protect')">
+            <div class="sg-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> الحماية والتأكيدات</div>
+            <span class="sg-arr" :class="{ 'sg-open': openGroups.has('protect') }">▼</span>
+          </div>
+          <div class="set-group-body" :class="openGroups.has('protect') ? 'sg-show' : ''">
+            <div class="set-group-body-inner">
+              <div class="glass p-4 space-y-2">
+                <span class="sec-h">تأكيد مزدوج قبل الحذف</span>
+                <p class="text-[9px] opacity-40">تحكم في عرض نافذة التأكيد مع العداد لكل نوع سجل</p>
+                <div v-for="dc in dcItems" :key="dc.key" class="dc-set-row">
+                  <div class="dc-set-info">
+                    <div class="dc-set-label">{{ dc.label }}</div>
+                    <div class="dc-set-sub">{{ dc.sub }}</div>
+                  </div>
+                  <div class="dc-set-dur">
+                    <input type="number" v-model.number="localCfg.dcConfirm[dc.key + 'Dur']" class="inp" min="0" max="30" @change="saveDcSettings">
+                    <span>ثانية</span>
+                  </div>
+                  <label class="tgl"><input type="checkbox" v-model="localCfg.dcConfirm[dc.key + 'On']" @change="saveDcSettings"><span class="tgl-s"></span></label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══ GROUP 4: الإشعارات ═══ -->
+        <div class="set-group">
+          <div class="set-group-head" @click="toggle('notif')">
+            <div class="sg-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg> الإشعارات</div>
+            <span class="sg-arr" :class="{ 'sg-open': openGroups.has('notif') }">▼</span>
+          </div>
+          <div class="set-group-body" :class="openGroups.has('notif') ? 'sg-show' : ''">
+            <div class="set-group-body-inner">
+              <div class="glass p-4 space-y-3">
+                <div class="flex items-center justify-between">
+                  <div><p class="text-xs font-bold">تذكير المواعيد القادمة</p><p class="text-[10px] opacity-40">إشعار عند فتح التطبيق بمواعيد اليوم والغد</p></div>
+                  <label class="tgl"><input type="checkbox" v-model="localCfg.apptNotif" @change="saveNotifSettings"><span class="tgl-s"></span></label>
+                </div>
+              </div>
+              <div class="glass p-4 space-y-3">
+                <div class="flex items-center justify-between">
+                  <div><p class="text-xs font-bold">العودة التلقائية لتبويب الإضافة</p><p class="text-[10px] opacity-40">بعد حفظ موعد المتابعة</p></div>
+                  <label class="tgl"><input type="checkbox" v-model="localCfg.followUpAuto" @change="saveNotifSettings"><span class="tgl-s"></span></label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══ GROUP 5: المظهر والعرض ═══ -->
         <div class="set-group">
           <div class="set-group-head" @click="toggle('theme')">
-            <div class="sg-title">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
-              المظهر والعرض
-            </div>
+            <div class="sg-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg> المظهر والعرض</div>
             <span class="sg-arr" :class="{ 'sg-open': openGroups.has('theme') }">▼</span>
           </div>
           <div class="set-group-body" :class="openGroups.has('theme') ? 'sg-show' : ''">
@@ -115,13 +168,10 @@
           </div>
         </div>
 
-        <!-- GROUP 4: Sync & Backup -->
+        <!-- ═══ GROUP 6: التخزين والنسخ الاحتياطي ═══ -->
         <div class="set-group">
           <div class="set-group-head" @click="toggle('storage')">
-            <div class="sg-title">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z"/></svg>
-              التخزين والنسخ الاحتياطي
-            </div>
+            <div class="sg-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z"/></svg> التخزين والنسخ الاحتياطي</div>
             <span class="sg-arr" :class="{ 'sg-open': openGroups.has('storage') }">▼</span>
           </div>
           <div class="set-group-body" :class="openGroups.has('storage') ? 'sg-show' : ''">
@@ -130,9 +180,17 @@
                 <span class="sec-h">المزامنة</span>
                 <div class="flex items-center justify-between"><span class="text-xs opacity-60">مزامنة تلقائية</span><label class="tgl"><input type="checkbox" v-model="localCfg.autoSync" @change="saveSetting('autoSync')"><span class="tgl-s"></span></label></div>
                 <div class="flex gap-2 items-center"><span class="text-xs opacity-50 whitespace-nowrap">كل:</span><input type="number" v-model.number="localCfg.syncMin" class="inp flex-1 text-sm" min="5" placeholder="30"><span class="text-xs opacity-40">دقيقة</span><button @click="saveSetting('syncMin')" class="btn-g px-3 py-2 text-xs">حفظ</button></div>
+                <button @click="manualSync" class="btn-o w-full py-2 text-xs flex items-center justify-center gap-2">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0115-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 01-15 6.7L3 16"/></svg>
+                  مزامنة الآن
+                </button>
               </div>
               <div class="glass p-4 space-y-3">
                 <span class="sec-h">النسخ الاحتياطي</span>
+                <button @click="exportExcel" class="btn-o w-full py-2 text-xs flex items-center justify-center gap-1.5">
+                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:-2px"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+                  تصدير Excel
+                </button>
                 <button @click="exportJSON" class="btn-o w-full py-2 text-xs flex items-center justify-center gap-1.5">
                   <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:-2px"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M16 13H8M16 17H8M10 9H8"/></svg>
                   نسخة محلية JSON
@@ -147,7 +205,34 @@
           </div>
         </div>
 
-        <!-- Logout -->
+        <!-- ═══ GROUP 7: قوالب رسائل واتساب ═══ -->
+        <div class="set-group">
+          <div class="set-group-head" @click="toggle('wa')">
+            <div class="sg-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#25d366" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg> قوالب رسائل واتساب</div>
+            <span class="sg-arr" :class="{ 'sg-open': openGroups.has('wa') }">▼</span>
+          </div>
+          <div class="set-group-body" :class="openGroups.has('wa') ? 'sg-show' : ''">
+            <div class="set-group-body-inner">
+              <div class="glass p-4 space-y-3">
+                <p class="text-[9px] opacity-40">استخدم {name} لاسم المريض و {center} لاسم العيادة</p>
+                <div class="space-y-3">
+                  <div v-for="(tpl, i) in localWaTpls" :key="i" class="glass-sm p-3 space-y-2 rounded-xl">
+                    <input type="text" v-model="tpl.lbl" class="inp text-xs font-bold" placeholder="اسم القالب">
+                    <textarea v-model="tpl.msg" class="inp text-xs h-20 resize-none" placeholder="نص الرسالة..."></textarea>
+                    <button @click="removeWaTpl(i)" class="text-red-400 text-[10px] px-2 py-0.5 rounded-lg" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2)">✕ حذف القالب</button>
+                  </div>
+                </div>
+                <button @click="addWaTpl" class="btn-o w-full py-2 text-xs">+ إضافة قالب جديد</button>
+                <button @click="saveWaTpls" class="btn-g w-full py-2.5 text-xs flex items-center justify-center gap-1.5">
+                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  حفظ القوالب
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══ تسجيل الخروج ═══ -->
         <div class="glass p-4">
           <button @click="doLogout" class="w-full py-3 text-sm font-bold rounded-xl flex items-center justify-center gap-2" style="background:rgba(255,68,85,.1);border:1px solid rgba(255,68,85,.25);color:#ff4455">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
@@ -155,7 +240,7 @@
           </button>
         </div>
 
-        <!-- Support -->
+        <!-- ═══ الدعم الفني ═══ -->
         <div class="glass p-4 space-y-2 text-center">
           <p class="text-[10px] opacity-35 mb-2">الدعم الفني</p>
           <a href="https://wa.me/218919292258" target="_blank" rel="noopener"
@@ -185,12 +270,19 @@ const router = useRouter()
 const app = useAppStore()
 const auth = useAuthStore()
 const { toast } = useToast()
-const { toggleTheme: doToggleTheme, initTheme } = useTheme()
+const { toggleTheme: doToggleTheme } = useTheme()
 
 const openGroups = ref(new Set(['center']))
 const newClinic = ref('')
 const newService = ref('')
 const newPayment = ref('')
+
+const dcItems = [
+  { key: 'rec', label: 'السجلات', sub: 'سجلات العلاج والتركيبات' },
+  { key: 'debt', label: 'الديون', sub: 'سجلات الديون والدفعات' },
+  { key: 'pat', label: 'المرضى', sub: 'حذف بيانات مريض بالكامل' },
+  { key: 'appt', label: 'المواعيد', sub: 'حذف مواعيد المرضى' },
+]
 
 const fontSizes = [
   { key: 'fs-small', label: 'صغير' },
@@ -200,6 +292,8 @@ const fontSizes = [
 ]
 const currentFontSize = ref(localStorage.getItem('dental_font_size') || 'fs-medium')
 const isLight = ref(document.body.classList.contains('light'))
+const logoPreview = ref('')
+const localWaTpls = ref([])
 
 const localCfg = reactive({
   centerName: '',
@@ -211,6 +305,9 @@ const localCfg = reactive({
   servicePrices: {},
   autoSync: true,
   syncMin: 30,
+  apptNotif: true,
+  followUpAuto: false,
+  dcConfirm: { recOn: true, recDur: 3, debtOn: true, debtDur: 3, patOn: true, patDur: 3, apptOn: true, apptDur: 3 },
 })
 
 watch(() => app.config, (cfg) => {
@@ -223,6 +320,16 @@ watch(() => app.config, (cfg) => {
   localCfg.servicePrices = { ...(cfg.servicePrices || {}) }
   localCfg.autoSync = cfg.autoSync !== false
   localCfg.syncMin = cfg.syncMin || 30
+  localCfg.apptNotif = cfg.apptNotif !== false
+  localCfg.followUpAuto = cfg.followUpAuto === true
+  localCfg.dcConfirm = {
+    recOn: cfg.dcConfirm?.recOn !== false, recDur: cfg.dcConfirm?.recDur ?? 3,
+    debtOn: cfg.dcConfirm?.debtOn !== false, debtDur: cfg.dcConfirm?.debtDur ?? 3,
+    patOn: cfg.dcConfirm?.patOn !== false, patDur: cfg.dcConfirm?.patDur ?? 3,
+    apptOn: cfg.dcConfirm?.apptOn !== false, apptDur: cfg.dcConfirm?.apptDur ?? 3,
+  }
+  logoPreview.value = cfg.logo || ''
+  localWaTpls.value = (cfg.waTemplates || []).map(t => ({ ...t }))
 }, { immediate: true, deep: true })
 
 function toggle(key) {
@@ -231,30 +338,26 @@ function toggle(key) {
   openGroups.value = new Set(openGroups.value)
 }
 
-function saveSetting(key) {
-  const updates = {}
-  updates[key] = localCfg[key]
+function saveAndSync(updates) {
   app.updateConfig(updates)
   app.saveToCache(auth.uid)
   app.syncSave(auth.uid, false)
   toast('تم الحفظ')
 }
 
+function saveSetting(key) {
+  saveAndSync({ [key]: localCfg[key] })
+}
+
 function addItem(key, val) {
   if (!val?.trim()) return
   localCfg[key].push(val.trim())
-  app.updateConfig({ [key]: [...localCfg[key]] })
-  app.saveToCache(auth.uid)
-  app.syncSave(auth.uid, false)
-  toast('تمت الإضافة')
+  saveAndSync({ [key]: [...localCfg[key]] })
 }
 
 function removeItem(key, idx) {
   localCfg[key].splice(idx, 1)
-  app.updateConfig({ [key]: [...localCfg[key]] })
-  app.saveToCache(auth.uid)
-  app.syncSave(auth.uid, false)
-  toast('تم الحذف')
+  saveAndSync({ [key]: [...localCfg[key]] })
 }
 
 function setSvcPrice(svc, val) {
@@ -262,9 +365,45 @@ function setSvcPrice(svc, val) {
   if (val && Number(val) > 0) prices[svc] = Number(val)
   else delete prices[svc]
   localCfg.servicePrices = prices
-  app.updateConfig({ servicePrices: prices })
-  app.saveToCache(auth.uid)
-  app.syncSave(auth.uid, false)
+  saveAndSync({ servicePrices: prices })
+}
+
+function saveDcSettings() {
+  saveAndSync({ dcConfirm: { ...localCfg.dcConfirm } })
+}
+
+function saveNotifSettings() {
+  saveAndSync({ apptNotif: localCfg.apptNotif, followUpAuto: localCfg.followUpAuto })
+  localStorage.setItem('dental_followup_auto', localCfg.followUpAuto ? '1' : '0')
+  localStorage.setItem('dental_appt_notif', localCfg.apptNotif ? '1' : '0')
+}
+
+function uploadLogo(e) {
+  const file = e.target.files?.[0]
+  if (!file) return
+  const reader = new FileReader()
+  reader.onload = (ev) => {
+    logoPreview.value = ev.target.result
+    saveAndSync({ logo: ev.target.result })
+  }
+  reader.readAsDataURL(file)
+}
+
+function removeLogo() {
+  logoPreview.value = ''
+  saveAndSync({ logo: '' })
+}
+
+function addWaTpl() {
+  localWaTpls.value.push({ lbl: '', msg: '' })
+}
+
+function removeWaTpl(idx) {
+  localWaTpls.value.splice(idx, 1)
+}
+
+function saveWaTpls() {
+  saveAndSync({ waTemplates: localWaTpls.value.filter(t => t.lbl || t.msg) })
 }
 
 function setFontSize(key) {
@@ -277,6 +416,37 @@ function setFontSize(key) {
 function toggleTheme() {
   doToggleTheme()
   isLight.value = document.body.classList.contains('light')
+}
+
+async function manualSync() {
+  try {
+    const ok = await app.syncSave(auth.uid, false)
+    await app.syncLoad(auth.uid)
+    app.saveToCache(auth.uid)
+    if (!ok) toast('⚠ تحقق من الاتصال')
+    else toast('تمت المزامنة')
+  } catch {
+    toast('فشلت المزامنة')
+  }
+}
+
+function exportExcel() {
+  const rows = [['التاريخ', 'الاسم', 'المبلغ', 'العيادة', 'الخدمة', 'الدفع', 'ملاحظات']]
+  app.records.forEach(r => {
+    rows.push([r.date || '', r.name || '', r.amount || 0, r.clinic || '', r.service || '', r.payment || '', r.notes || ''])
+  })
+  let csv = '\uFEFF'
+  rows.forEach(row => {
+    csv += row.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(',') + '\n'
+  })
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `dental_export_${new Date().toISOString().substring(0, 10)}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+  toast('تم تصدير البيانات')
 }
 
 function exportJSON() {
