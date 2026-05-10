@@ -307,6 +307,9 @@ details[open] .appt-chevron { transform: rotate(180deg); }
 .svc-option { padding: 10px 14px; font-size: 12px; cursor: pointer; transition: background .14s; font-family: -apple-system, 'Cairo', sans-serif; color: #dde4f0; }
 .svc-option:hover { background: rgba(59,130,246,.18); }
 
+/* ── Fast mode ── */
+.fast-mode-on .fm-hide { display: none !important; }
+
 /* ── Palmer notation ── */
 .palmer-cell { display: inline-flex; align-items: center; justify-content: center; font-variant-numeric: tabular-nums; font-weight: 800; font-size: 14px; padding: 3px 7px; direction: ltr; line-height: 1.2; }
 .palmer-cell.q-ur { border-bottom: 2px solid currentColor; border-right: 2px solid currentColor; }

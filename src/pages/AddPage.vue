@@ -116,50 +116,59 @@
         </div>
       </div>
 
+      <!-- Report Toggle -->
+      <div class="glass-sm p-3 flex items-center justify-between fm-hide">
+        <div>
+          <p class="text-xs font-bold">تقرير</p>
+          <p class="text-[9px] opacity-40">تقرير المعالجات (اختياري)</p>
+        </div>
+        <div class="flex items-center gap-2.5">
+          <button v-if="form.hasReport" @click="openReportModal" class="btn-o px-3 py-1.5 text-xs flex items-center gap-1.5">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            تحديد
+          </button>
+          <label class="tgl"><input type="checkbox" v-model="form.hasReport"><span class="tgl-s"></span></label>
+        </div>
+      </div>
+      <div v-if="form.hasReport" class="space-y-1.5" id="rPreviewWrap"></div>
+
       <!-- Debt toggle -->
-      <div class="fm-hide">
-        <div class="flex items-center justify-between">
-          <label class="text-[10px] opacity-45">تسجيل كدين</label>
-          <label class="tgl"><input type="checkbox" v-model="form.isDebt"><span class="tgl-s"></span></label>
+      <div class="glass-sm p-3 flex items-center justify-between fm-hide">
+        <div><p class="text-xs font-bold">تسجيل كدين؟</p><p class="text-[9px] opacity-40">لن يُضاف للخزينة حتى الدفع</p></div>
+        <label class="tgl"><input type="checkbox" v-model="form.isDebt"><span class="tgl-s"></span></label>
+      </div>
+      <div v-if="form.isDebt" class="space-y-3">
+        <div class="glass-sm p-3 space-y-2">
+          <label class="text-[10px] opacity-45 block">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:-2px"><circle cx="12" cy="12" r="10"/><path d="M12 6v12M8 10h8M8 14h8"/></svg>
+            الدفعة الأولى (اختياري)
+          </label>
+          <input type="number" v-model="form.firstPayment" class="inp" placeholder="0 — اترك فارغاً إذا لم تُدفع شيء" min="0">
+          <p class="text-[9px] opacity-35">تُسجَّل كدفعة جزئية فورية في السجلات والخزينة</p>
         </div>
-        <div v-if="form.isDebt" class="mt-2 space-y-2">
-          <input type="text" v-model="form.debtPhone" class="inp text-xs" placeholder="رقم هاتف المريض (اختياري)">
-          <input type="text" v-model="form.debtNote" class="inp text-xs" placeholder="ملاحظة (اختياري)">
-        </div>
+        <input type="tel" v-model="form.debtPhone" class="inp" placeholder=" رقم الهاتف (اختياري)">
+        <textarea v-model="form.debtNote" class="inp h-16 resize-none text-xs" placeholder="ملاحظات..."></textarea>
       </div>
 
-      <!-- Appointment row -->
-      <div class="fm-hide">
-        <div class="flex items-center justify-between">
-          <label class="text-[10px] opacity-45">حجز موعد قادم</label>
-          <label class="tgl"><input type="checkbox" v-model="form.hasAppt"><span class="tgl-s"></span></label>
-        </div>
-        <div v-if="form.hasAppt" class="mt-2 grid grid-cols-2 gap-2">
-          <input type="date" v-model="form.apptDate" class="inp text-xs">
-          <input type="time" v-model="form.apptTime" class="inp text-xs">
-          <input type="text" v-model="form.apptSvc" class="inp text-xs col-span-2" placeholder="الخدمة (اختياري)">
-        </div>
-      </div>
-
-      <!-- Notes -->
-      <div class="fm-hide">
-        <label class="text-[10px] opacity-45 mb-1 block">ملاحظات</label>
-        <textarea v-model="form.notes" class="inp text-xs" rows="2" placeholder="ملاحظات إضافية..."></textarea>
-      </div>
-
-      <!-- Dental report toggle -->
-      <div class="fm-hide flex items-center justify-between">
-        <label class="text-[10px] opacity-45">إضافة تقرير سني</label>
-        <label class="tgl"><input type="checkbox" v-model="form.hasReport"><span class="tgl-s"></span></label>
-      </div>
-
-      <!-- Action buttons -->
-      <div class="flex gap-2">
-        <button @click="saveRecord" class="btn-g flex-1 py-3 text-sm" :disabled="saving">
-          {{ editId ? 'تحديث' : 'حفظ' }}
+      <!-- Appointment toggle -->
+      <div v-if="!form.hasAppt" class="fm-hide">
+        <button @click="form.hasAppt = true" class="btn-o w-full py-2 text-xs flex items-center justify-center gap-1.5">
+          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+          إضافة موعد متابعة (اختياري)
         </button>
-        <button v-if="editId" @click="resetForm" class="btn-o px-4 py-3 text-sm">إلغاء</button>
       </div>
+      <div v-if="form.hasAppt" class="appt-field fm-hide">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="flex-shrink:0;opacity:.55"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        <span class="text-[10px] opacity-50 flex-shrink-0">موعد المتابعة:</span>
+        <input type="date" v-model="form.apptDate" class="inp flex-1 text-xs" style="padding:4px 8px;min-height:36px">
+      </div>
+
+      <!-- Save button -->
+      <button @click="saveRecord" class="btn-g w-full py-4 text-sm shadow-lg" :disabled="saving">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:-2px"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        {{ editId ? 'تحديث البيانات' : 'حفظ البيانات' }}
+      </button>
+      <button v-if="editId" @click="resetForm" class="w-full btn-del py-2.5 text-xs rounded-xl">✕ إلغاء التعديل</button>
     </div>
   </div>
 </template>
@@ -200,6 +209,7 @@ const form = reactive({
   labExpected: '',
   labStatus: '',
   isDebt: false,
+  firstPayment: '',
   debtPhone: '',
   debtNote: '',
   hasAppt: false,
@@ -224,19 +234,28 @@ const prosCalc = computed(() => {
   }
 })
 
+function openReportModal() {
+  toast('التقرير السني — قريباً')
+}
+
 const todayBarHtml = computed(() => {
   const today = todayStr()
-  const todayRecs = recordsStore.records.filter(r => r.date === today)
+  const todayRecs = recordsStore.records.filter(r => r.date === today && !r.isDebt && !r.isPros && r.payment !== 'دين')
   const todayPros = recordsStore.prosthetics.filter(p => p.date === today)
-  const all = [...todayRecs, ...todayPros]
-  const totalAmt = sum(all, 'amount')
-  const count = all.length
-  const todayAppts = apptsStore.getTodayAppointments()
+  const todayDebtPays = recordsStore.records.filter(r => r.date === today && r.isDebtPayment)
+  const names = new Set([...todayRecs.map(r => r.name), ...todayPros.map(p => p.name), ...todayDebtPays.map(r => r.name)])
+  const actualIncome = sum(todayRecs, 'amount') + sum(todayDebtPays, 'amount')
+  const pendD = debtsStore.debts.filter(d => d.status !== 'paid')
+  const pendDTotal = pendD.reduce((s, d) => s + (Number(d.remaining) || 0), 0)
+  const cur = configStore.currency
 
   return `
-    <div class="today-cell"><div class="today-val">${count}</div><div class="today-lbl">مراجعات اليوم</div></div>
-    <div class="today-cell"><div class="today-val n">${n(totalAmt)}</div><div class="today-lbl">إيرادات اليوم</div></div>
-    <div class="today-cell"><div class="today-val">${todayAppts.length}</div><div class="today-lbl">مواعيد اليوم</div></div>
+    <div class="today-cell"><div class="today-val">${names.size || '\u2014'}</div><div class="today-lbl">مريض اليوم</div></div>
+    <div class="today-cell"><div class="today-val" style="font-size:calc(12px * var(--fs))">${actualIncome > 0 ? n(actualIncome) : '\u2014'}</div><div class="today-lbl">دخل فعلي ${cur}</div></div>
+    <div class="today-cell${pendD.length ? ' clickable' : ''}" style="${pendD.length ? 'cursor:pointer' : ''}">
+      <div class="today-val" style="color:${pendD.length ? 'var(--red)' : 'var(--green)'}; font-size:calc(${pendD.length && pendDTotal > 0 ? '11' : '15'}px * var(--fs))">${pendD.length ? (n(pendDTotal) + ' ' + cur) : '\u2713'}</div>
+      <div class="today-lbl">${pendD.length ? pendD.length + ' دين معلق' : 'لا ديون'}</div>
+    </div>
   `
 })
 
