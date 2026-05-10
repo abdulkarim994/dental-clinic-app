@@ -9,7 +9,7 @@
       <div v-for="m in months" :key="m" class="glass p-4 cursor-pointer transition-all hover:border-yellow-400/30" @click="openDetail(m)">
         <div class="flex justify-between items-center mb-3">
           <div class="flex items-center gap-2">
-            <span class="text-xl">📅</span>
+            <span class="text-xl"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:-2px;color:var(--gold)"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span>
             <span class="font-black text-sm" style="color:var(--gold-l)"><span class="n">{{ m }}</span></span>
           </div>
           <div class="text-left" v-if="monthData(m).inMem">
@@ -19,10 +19,10 @@
           <span v-else class="text-xs opacity-45">اضغط للتحميل ↗</span>
         </div>
         <div v-if="monthData(m).inMem" class="grid grid-cols-3 gap-2 text-center">
-          <div><p class="text-[9px] opacity-35">💵 كاش</p><p class="text-xs font-bold text-green-400"><span class="n">{{ n(monthData(m).cash) }}</span></p></div>
-          <div><p class="text-[9px] opacity-35">🏦 تحويل</p><p class="text-xs font-bold text-blue-400"><span class="n">{{ n(monthData(m).xfer) }}</span></p></div>
+          <div><p class="text-[9px] opacity-35"><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:-1px"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M2 10h20"/><circle cx="12" cy="15" r="2"/></svg> كاش</p><p class="text-xs font-bold text-green-400"><span class="n">{{ n(monthData(m).cash) }}</span></p></div>
+          <div><p class="text-[9px] opacity-35"><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:-1px"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M3 9h18"/><path d="M8 15h4"/></svg> تحويل</p><p class="text-xs font-bold text-blue-400"><span class="n">{{ n(monthData(m).xfer) }}</span></p></div>
           <div>
-            <p class="text-[9px] opacity-35">🦷 تركيبات ({{ cur }})</p>
+            <p class="text-[9px] opacity-35"><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:-1px"><path d="M12 2C8.5 2 7 4.5 7 7c0 3 1.5 6 2 9 .3 2 .7 4 1 5h4c.3-1 .7-3 1-5 .5-3 2-6 2-9 0-2.5-1.5-5-5-5z"/></svg> تركيبات ({{ cur }})</p>
             <p class="text-xs font-bold text-yellow-400"><span class="n">{{ n(monthData(m).prosDoc) }}</span></p>
           </div>
         </div>
@@ -33,17 +33,17 @@
     <div v-else>
       <div class="flex items-center gap-3 mb-4">
         <button @click="detailMonth = null" class="btn-o px-3 py-1.5 text-xs">← رجوع</button>
-        <h3 class="font-bold text-sm flex-1" style="color:var(--gold)">📁 {{ detailMonth }}</h3>
+        <h3 class="font-bold text-sm flex-1" style="color:var(--gold)"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:-2px"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg> {{ detailMonth }}</h3>
         <button @click="printMonth" class="btn-o px-3 py-1.5 text-xs">
           <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:-2px"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> طباعة
         </button>
       </div>
       <div class="glass p-4 space-y-3">
         <div class="grid grid-cols-3 gap-2 text-center">
-          <div class="stat-card p-3"><p class="text-[9px] opacity-40">💵 كاش</p><p class="text-sm font-bold text-green-400"><span class="n">{{ n(detailData.cash) }}</span></p></div>
-          <div class="stat-card p-3"><p class="text-[9px] opacity-40">🏦 تحويل</p><p class="text-sm font-bold text-blue-400"><span class="n">{{ n(detailData.xfer) }}</span></p></div>
+          <div class="stat-card p-3"><p class="text-[9px] opacity-40"><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:-1px"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M2 10h20"/><circle cx="12" cy="15" r="2"/></svg> كاش</p><p class="text-sm font-bold text-green-400"><span class="n">{{ n(detailData.cash) }}</span></p></div>
+          <div class="stat-card p-3"><p class="text-[9px] opacity-40"><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:-1px"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M3 9h18"/><path d="M8 15h4"/></svg> تحويل</p><p class="text-sm font-bold text-blue-400"><span class="n">{{ n(detailData.xfer) }}</span></p></div>
           <div class="stat-card p-3">
-            <p class="text-[9px] opacity-40">🦷 تركيبات ({{ cur }})</p>
+            <p class="text-[9px] opacity-40"><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:-1px"><path d="M12 2C8.5 2 7 4.5 7 7c0 3 1.5 6 2 9 .3 2 .7 4 1 5h4c.3-1 .7-3 1-5 .5-3 2-6 2-9 0-2.5-1.5-5-5-5z"/></svg> تركيبات ({{ cur }})</p>
             <p class="text-sm font-bold text-yellow-400"><span class="n">{{ n(detailData.prosDoc) }}</span></p>
           </div>
         </div>

@@ -29,8 +29,8 @@
           </div>
           <div class="flex items-center gap-3">
             <div class="text-left text-[9px] opacity-50">
-              <span class="text-green-400">💵 {{ n(group.cash) }}</span>
-              <span class="text-blue-400 mr-2">🏦 {{ n(group.xfer) }}</span>
+              <span class="text-green-400"><svg viewBox="0 0 24 24" width="9" height="9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:-1px"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M2 10h20"/><circle cx="12" cy="15" r="2"/></svg> {{ n(group.cash) }}</span>
+              <span class="text-blue-400 mr-2"><svg viewBox="0 0 24 24" width="9" height="9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:-1px"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M3 9h18"/><path d="M8 15h4"/></svg> {{ n(group.xfer) }}</span>
             </div>
             <span class="acc-arr text-xs opacity-40" :class="{ open: openClinics.has(group.key) }">▼</span>
           </div>

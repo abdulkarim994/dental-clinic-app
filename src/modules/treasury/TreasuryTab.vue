@@ -6,17 +6,17 @@
         <span class="sec-h">{{ cli }}</span>
         <div class="grid grid-cols-3 gap-2">
           <div class="stat-card p-3 text-center cursor-pointer" @click="showDetail('cash', cli)">
-            <p class="text-[9px] opacity-45 mb-1">💵 كاش</p>
+            <p class="text-[9px] opacity-45 mb-1"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:-1px"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M2 10h20"/><circle cx="12" cy="15" r="2"/></svg> كاش</p>
             <p class="text-sm font-bold text-green-400"><span class="n">{{ n(getClinicCash(cli)) }}</span></p>
             <p class="text-[9px] opacity-30">{{ cur }}</p>
           </div>
           <div class="stat-card p-3 text-center cursor-pointer" @click="showDetail('xfer', cli)">
-            <p class="text-[9px] opacity-45 mb-1">🏦 تحويل</p>
+            <p class="text-[9px] opacity-45 mb-1"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:-1px"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M3 9h18"/><path d="M8 15h4"/></svg> تحويل</p>
             <p class="text-sm font-bold text-blue-400"><span class="n">{{ n(getClinicXfer(cli)) }}</span></p>
             <p class="text-[9px] opacity-30">{{ cur }}</p>
           </div>
           <div class="stat-card p-3 text-center cursor-pointer" @click="showDetail('pros', cli)">
-            <p class="text-[9px] opacity-45 mb-1">🦷 تركيبات</p>
+            <p class="text-[9px] opacity-45 mb-1"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:-1px"><path d="M12 2C8.5 2 7 4.5 7 7c0 3 1.5 6 2 9 .3 2 .7 4 1 5h4c.3-1 .7-3 1-5 .5-3 2-6 2-9 0-2.5-1.5-5-5-5z"/></svg> تركيبات</p>
             <p class="text-sm font-bold text-yellow-400"><span class="n">{{ n(getClinicProsDoc(cli)) }}</span></p>
             <p class="text-[9px] opacity-30">{{ cur }}</p>
           </div>
@@ -24,7 +24,7 @@
         <!-- Pending Debts for clinic -->
         <div v-if="getClinicDebtRem(cli) > 0" class="stat-card p-3 flex justify-between items-center cursor-pointer" style="border-color:rgba(255,68,85,.2);background:rgba(255,68,85,.05)" @click="goDebts">
           <div class="flex items-center gap-2">
-            <span style="color:var(--red)">⚠</span>
+            <span style="color:var(--red)"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:-2px"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg></span>
             <div>
               <p class="text-[9px] opacity-60 font-bold" style="color:var(--red)">ديون معلقة ({{ getClinicDebts(cli).length }})</p>
               <p class="text-[8px] opacity-40">لم تُضف للإيرادات بعد</p>

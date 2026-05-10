@@ -127,10 +127,16 @@
       <!-- Report Toggle -->
       <div v-if="!fastMode" class="glass-sm p-3 flex items-center justify-between">
         <div>
-          <p class="text-xs font-bold">📋 تقرير أسنان</p>
-          <p class="text-[9px] opacity-40">مخطط الأسنان + معلومات المريض</p>
+          <p class="text-xs font-bold">تقرير</p>
+          <p class="text-[9px] opacity-40">تقرير المعالجات (اختياري)</p>
         </div>
-        <button @click="showReportModal = true" class="btn-g px-3 py-2 text-xs">{{ hasReport ? '✎ تعديل التقرير' : '+ إضافة تقرير' }}</button>
+        <div class="flex items-center gap-2.5">
+          <button v-if="hasReport" @click="showReportModal = true" class="btn-o px-3 py-1.5 text-xs flex items-center gap-1.5">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            تحديد
+          </button>
+          <label class="tgl"><input type="checkbox" v-model="hasReport" @change="onReportTgl"><span class="tgl-s"></span></label>
+        </div>
       </div>
       <div v-if="hasReport && reportEntries.length" class="glass-sm p-2 rounded-xl">
         <p class="text-[9px] opacity-40 mb-1">التقرير: {{ reportEntries.length }} معالجة — {{ n(reportTotal) }} {{ cur }}</p>
@@ -171,12 +177,12 @@
       </div>
 
       <!-- Appointment -->
-      <div v-if="showAppt" class="appt-field" style="display:flex;align-items:center;gap:8px" v-show="!fastMode">
+      <div v-if="showAppt && !fastMode" class="appt-field" style="display:flex;align-items:center;gap:8px">
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="flex-shrink:0;opacity:.55"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
         <span class="text-[10px] opacity-50 flex-shrink-0">موعد المتابعة:</span>
         <input type="date" v-model="form.appointment" class="inp flex-1 text-xs" style="padding:4px 8px;min-height:36px">
       </div>
-      <button v-if="!showAppt && !fastMode" @click="showAppt = true" class="btn-o w-full py-2 text-xs flex items-center justify-center gap-1.5">
+      <button v-if="!fastMode" @click="goFollowUpAppt" class="btn-o w-full py-2 text-xs flex items-center justify-center gap-1.5">
         <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
         إضافة موعد متابعة (اختياري)
       </button>
@@ -223,6 +229,15 @@ const reportTotal = computed(() => reportEntries.value.reduce((s, e) => s + (+e.
 function onReportConfirm() {
   hasReport.value = reportEntries.value.length > 0
   showReportModal.value = false
+}
+
+function onReportTgl() {
+  if (hasReport.value) {
+    showReportModal.value = true
+  } else {
+    reportEntries.value = []
+    reportMeta.value = {}
+  }
 }
 
 const form = ref({
@@ -535,6 +550,14 @@ async function saveRec() {
   resetForm()
   toast('✅ تم الحفظ بنجاح')
   saving.value = false
+}
+
+function goFollowUpAppt() {
+  const name = (form.value.name || '').trim()
+  const phone = (form.value.phone || '').trim()
+  const svc = (form.value.service || '').trim()
+  app.activeTab = 'calendar'
+  router.push({ name: 'calendar', query: { followup: '1', name, phone, service: svc } })
 }
 
 function resetForm() {

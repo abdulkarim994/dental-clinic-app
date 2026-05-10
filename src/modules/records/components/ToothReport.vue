@@ -3,7 +3,10 @@
     <div v-if="visible" class="modal-ol" style="display:flex;align-items:flex-start;justify-content:center;padding-top:20px" @click.self="tryClose">
       <div class="glass p-4 w-full max-w-md mx-3 space-y-4 rounded-2xl max-h-[92vh] overflow-y-auto" @click.stop>
         <div class="flex justify-between items-center">
-          <h3 class="font-bold text-sm" style="color:var(--gold)">🦷 تقرير الأسنان</h3>
+          <h3 class="font-bold text-sm" style="color:var(--gold)">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:-2px"><path d="M7 2C4 2 2 5 2 8c0 4 2.5 6 4 9 1 2 2 5 3 5s1.5-2 3-2 1.5 2 3 2 2-3 3-5c1.5-3 4-5 4-9 0-3-2-6-5-6-1.5 0-2.5.5-3 1.5S12.5 2 11 2c-1.5 0-2.5.5-3 1.5"/></svg>
+            تقرير الأسنان
+          </h3>
           <button @click="tryClose" class="glass-sm w-8 h-8 flex items-center justify-center text-sm">✕</button>
         </div>
 
@@ -31,7 +34,7 @@
               <span class="opacity-40">▼</span>
             </button>
             <div v-if="showSvcDrop" class="absolute top-full left-0 right-0 z-50 glass p-2 mt-1 rounded-xl max-h-48 overflow-y-auto space-y-0.5">
-              <div v-for="s in allServices" :key="s" class="svc-option p-2 rounded-lg text-xs cursor-pointer hover:bg-blue-500/10" @click="selectSvc(s)">🦷 {{ s }}</div>
+              <div v-for="s in allServices" :key="s" class="svc-option p-2 rounded-lg text-xs cursor-pointer hover:bg-blue-500/10" @click="selectSvc(s)">{{ s }}</div>
             </div>
           </div>
           <input type="number" v-model.number="cost" class="inp" placeholder="التكلفة (اختياري)" min="0">

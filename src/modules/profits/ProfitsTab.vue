@@ -26,24 +26,24 @@
     <div class="glass p-5 space-y-4">
       <div class="grid grid-cols-2 gap-3">
         <div class="stat-card p-4 text-center">
-          <p class="text-[9px] opacity-45 mb-1">💵 إجمالي الكاش</p>
+          <p class="text-[9px] opacity-45 mb-1"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:-1px"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M2 10h20"/><circle cx="12" cy="15" r="2"/></svg> إجمالي الكاش</p>
           <p class="text-lg font-black text-green-400"><span class="n">{{ n(yearCash) }}</span></p>
           <p class="text-[9px] opacity-35">{{ cur }}</p>
         </div>
         <div class="stat-card p-4 text-center">
-          <p class="text-[9px] opacity-45 mb-1">🏦 إجمالي التحويل</p>
+          <p class="text-[9px] opacity-45 mb-1"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:-1px"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M3 9h18"/><path d="M8 15h4"/></svg> إجمالي التحويل</p>
           <p class="text-lg font-black text-blue-400"><span class="n">{{ n(yearXfer) }}</span></p>
           <p class="text-[9px] opacity-35">{{ cur }}</p>
         </div>
       </div>
       <div class="stat-card p-4 space-y-2">
         <div class="text-center">
-          <p class="text-[9px] opacity-45 mb-1">🦷 نسبة الطبيب — تركيبات ({{ cur }})</p>
+          <p class="text-[9px] opacity-45 mb-1"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:-1px"><path d="M12 2C8.5 2 7 4.5 7 7c0 3 1.5 6 2 9 .3 2 .7 4 1 5h4c.3-1 .7-3 1-5 .5-3 2-6 2-9 0-2.5-1.5-5-5-5z"/></svg> نسبة الطبيب — تركيبات ({{ cur }})</p>
           <p class="text-lg font-black text-yellow-400"><span class="n">{{ n(yearProsDoc) }}</span> {{ cur }}</p>
         </div>
         <div v-if="yearProsDoc > 0" class="border-t border-white/10 pt-2 grid grid-cols-2 gap-2 text-center">
-          <div><p class="text-[9px] opacity-40">💵 كاش</p><p class="text-sm font-bold text-green-300"><span class="n">{{ n(yearProsCash) }}</span></p></div>
-          <div><p class="text-[9px] opacity-40">🏦 تحويل</p><p class="text-sm font-bold text-blue-300"><span class="n">{{ n(yearProsXfer) }}</span></p></div>
+          <div><p class="text-[9px] opacity-40"><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:-1px"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M2 10h20"/><circle cx="12" cy="15" r="2"/></svg> كاش</p><p class="text-sm font-bold text-green-300"><span class="n">{{ n(yearProsCash) }}</span></p></div>
+          <div><p class="text-[9px] opacity-40"><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:-1px"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M3 9h18"/><path d="M8 15h4"/></svg> تحويل</p><p class="text-sm font-bold text-blue-300"><span class="n">{{ n(yearProsXfer) }}</span></p></div>
         </div>
       </div>
       <div class="border-t border-white/10 pt-4 text-center">

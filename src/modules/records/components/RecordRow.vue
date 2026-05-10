@@ -4,7 +4,7 @@
       <div class="flex items-center gap-1.5 flex-wrap mb-0.5">
         <p class="text-xs font-bold">{{ record.name || '' }}</p>
         <span v-if="debtBadgeText" :class="debtBadgeClass" class="badge-click" style="cursor:pointer" @click.stop="goDebt" :title="debtTooltip">{{ debtBadgeText }}</span>
-        <span v-if="isDebtPay" class="b-paid-debt badge-click" style="cursor:pointer" @click.stop="goDebt">{{ record.debtPaymentType === 'full' ? '✅ سداد كلي' : '💰 دفعة جزئية' }}</span>
+        <span v-if="isDebtPay" class="b-paid-debt badge-click" style="cursor:pointer" @click.stop="goDebt">{{ record.debtPaymentType === 'full' ? 'سداد كلي' : 'دفعة جزئية' }}</span>
         <span v-if="record._s === 'p'" class="b-pros">تركيبات</span>
       </div>
       <p class="text-[9px] opacity-35">{{ record.date || '' }} | {{ record.service || '' }}</p>
