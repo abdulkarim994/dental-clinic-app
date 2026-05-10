@@ -1,0 +1,11 @@
+/* ══════════════════════════════════════════
+   Master Style Entry — imports all modules
+══════════════════════════════════════════ */
+@import './variables.css';
+@import './base.css';
+@import './navigation.css';
+@import './components.css';
+@import './modals.css';
+@import './animations.css';
+@import './login.css';
+@import './light-mode.css';

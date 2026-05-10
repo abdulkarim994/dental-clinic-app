@@ -1,0 +1,30 @@
+/* ══════════════════════════════════════════
+   Animations & Transitions
+══════════════════════════════════════════ */
+@keyframes dPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(255,68,85,.55); } 50% { box-shadow: 0 0 0 7px rgba(255,68,85,0); } }
+.d-pulse { animation: dPulse 2s infinite; border-radius: 50%; }
+
+@keyframes rot { to { transform: rotate(360deg); } }
+.spin { animation: rot 1s linear infinite; display: inline-block; }
+
+.tab-in { animation: tabSpring .44s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+@keyframes tabSpring { from { opacity: 0; transform: translateY(20px) scale(.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+@keyframes loginIn { from { opacity: 0; transform: translateY(28px) scale(.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+.login-card { animation: loginIn .55s cubic-bezier(0.34,1.36,0.64,1) forwards; }
+
+/* ── Fast mode ── */
+.fast-mode-on .fm-hide { display: none !important; }
+
+/* ── Dental loading animation ── */
+.tdd { animation: tddM 2.3s cubic-bezier(.45,0,.55,1) infinite; }
+.tdv { animation: tdvV .09s linear infinite; }
+.tdw { opacity: 0; }
+.tw1 { animation: tw1A 2.3s ease-in-out infinite; }
+.tw2 { animation: tw2A 2.3s ease-in-out infinite; }
+.tw3 { animation: tw3A 2.3s ease-in-out infinite; }
+@keyframes tddM { 0%,100% { transform: translateY(-11px); } 47%,53% { transform: translateY(9px); } }
+@keyframes tdvV { 0%,100% { transform: translateX(0); } 50% { transform: translateX(.65px); } }
+@keyframes tw1A { 0%,36% { opacity: 0; transform: translate(0,0); } 50% { opacity: .9; transform: translate(-1px,0); } 65% { opacity: 0; transform: translate(-6px,7px); } 100% { opacity: 0; } }
+@keyframes tw2A { 0%,38% { opacity: 0; transform: translate(0,0); } 51% { opacity: .8; } 67% { opacity: 0; transform: translate(5px,6px); } 100% { opacity: 0; } }
+@keyframes tw3A { 0%,37% { opacity: 0; transform: translate(0,0); } 52% { opacity: .85; } 66% { opacity: 0; transform: translate(-4px,8px); } 100% { opacity: 0; } }
