@@ -114,20 +114,27 @@ export async function saveToSupabase(uid, { records, prosthetics, debts, config,
       _knownMonths.add(m)
     }
 
-    if (showOl || _debtsDirty) {
+    const savedDebts = showOl || _debtsDirty
+    if (savedDebts) {
       ops.push(sbUpsert(uid, 'debts', '', debts))
-      _debtsDirty = false
     }
 
-    if (showOl || _apptsDirty) {
+    const savedAppts = showOl || _apptsDirty
+    if (savedAppts) {
       ops.push(sbUpsert(uid, 'appointments', '', appointments))
-      _apptsDirty = false
     }
 
     ops.push(sbUpsert(uid, 'config', '', config))
-    _dirtyMonths.clear()
 
     await Promise.all(ops)
+
+    // Clear dirty flags only after successful save
+    if (savedDebts) _debtsDirty = false
+    if (savedAppts) _apptsDirty = false
+    for (const m of monthsToSave) {
+      _dirtyMonths.delete(m)
+    }
+
     return true
   } catch (e) {
     console.error('[Sync] save error:', e)
