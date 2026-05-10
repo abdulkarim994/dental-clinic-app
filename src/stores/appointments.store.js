@@ -1,5 +1,6 @@
 /**
  * Appointments Store — manages patient appointments and calendar
+ * Phase 2: Uses item-level dirty tracking for normalized tables
  */
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
@@ -7,28 +8,34 @@ import { uid } from '../utils/helpers'
 
 export const useAppointmentsStore = defineStore('appointments', () => {
   const appointments = ref([])
-  const dirty = ref(false)
+  const dirtyAppointments = ref(new Set())
+  const deletedAppointments = ref(new Set())
+
+  function markDirty(id) {
+    if (id) dirtyAppointments.value.add(id)
+  }
 
   function setAppointments(appts) {
     appointments.value = appts
   }
 
   function addAppointment(appt) {
-    appointments.value.push({ ...appt, id: appt.id || uid() })
-    dirty.value = true
+    const a = { ...appt, id: appt.id || uid() }
+    appointments.value.push(a)
+    markDirty(a.id)
   }
 
   function updateAppointment(id, updates) {
     const idx = appointments.value.findIndex(a => a.id === id)
     if (idx !== -1) {
       appointments.value[idx] = { ...appointments.value[idx], ...updates }
-      dirty.value = true
+      markDirty(id)
     }
   }
 
   function removeAppointment(id) {
     appointments.value = appointments.value.filter(a => a.id !== id)
-    dirty.value = true
+    deletedAppointments.value.add(id)
   }
 
   function getAppointmentsByDate(date) {
@@ -54,13 +61,15 @@ export const useAppointmentsStore = defineStore('appointments', () => {
   }
 
   function clearDirty() {
-    dirty.value = false
+    dirtyAppointments.value.clear()
+    deletedAppointments.value.clear()
   }
 
   return {
-    appointments, dirty,
+    appointments, dirtyAppointments, deletedAppointments,
     setAppointments, addAppointment, updateAppointment, removeAppointment,
     getAppointmentsByDate, getAppointmentsByMonth,
-    getUpcomingAppointments, getTodayAppointments, clearDirty
+    getUpcomingAppointments, getTodayAppointments, clearDirty,
+    markDirty
   }
 })

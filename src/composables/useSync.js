@@ -1,5 +1,6 @@
 /**
  * Sync composable — manages data synchronization lifecycle
+ * Phase 2: Uses normalized tables with item-level dirty tracking
  */
 import { ref } from 'vue'
 import { useAuthStore } from '../stores/auth.store'
@@ -10,11 +11,12 @@ import { useConfigStore } from '../stores/config.store'
 import { useUiStore } from '../stores/ui.store'
 import { cacheSave, cacheLoad } from '../services/cache.service'
 import { saveToSupabase, loadFromSupabase, setupRealtime, clearRealtime, monthOf } from '../services/sync.service'
+import { deleteRecord, deleteProsthetic, deleteDebt, deleteAppointment } from '../services/database.service'
 import { DEFAULT_CONFIG } from '../utils/defaults'
 import { useToast } from './useToast'
 
 let syncTimer = null
-let rtChannel = null
+let rtChannels = null
 
 export function useSync() {
   const { toast } = useToast()
@@ -51,7 +53,6 @@ export function useSync() {
     debts.setDebts(data.debts)
     config.setConfig(data.cfg)
     appts.setAppointments(data.appointments)
-    records.rebuildKnownMonths()
   }
 
   async function save(showOl = false) {
@@ -61,16 +62,35 @@ export function useSync() {
     const onProgress = showOl ? (p) => ui.updateSyncProgress(p) : null
     if (showOl) ui.showSync('رفع البيانات...', 0)
 
+    // Handle deletions first
+    const deleteOps = []
+    for (const id of records.deletedRecords) {
+      deleteOps.push(deleteRecord(id))
+    }
+    for (const id of records.deletedProsthetics) {
+      deleteOps.push(deleteProsthetic(id))
+    }
+    for (const id of debts.deletedDebts) {
+      deleteOps.push(deleteDebt(id))
+    }
+    for (const id of appts.deletedAppointments) {
+      deleteOps.push(deleteAppointment(id))
+    }
+    if (deleteOps.length > 0) {
+      await Promise.all(deleteOps)
+    }
+
     const ok = await saveToSupabase(auth.userId, {
       records: records.records,
       prosthetics: records.prosthetics,
       debts: debts.debts,
       appointments: appts.appointments,
       cfg: config.cfg,
-      dirtyMonths: records.dirtyMonths,
-      knownMonths: records.knownMonths,
-      debtsDirty: debts.dirty,
-      apptsDirty: appts.dirty,
+      dirtyRecords: records.dirtyRecords,
+      dirtyProsthetics: records.dirtyProsthetics,
+      dirtyDebts: debts.dirtyDebts,
+      dirtyAppointments: appts.dirtyAppointments,
+      cfgDirty: config.dirty,
       showOl,
       onProgress
     })
@@ -79,6 +99,7 @@ export function useSync() {
       records.clearDirty()
       debts.clearDirty()
       appts.clearDirty()
+      if (config.dirty) config.dirty = false
     }
 
     if (showOl) ui.updateSyncProgress(100)
@@ -93,10 +114,7 @@ export function useSync() {
     if (showOl) ui.showSync('تحميل البيانات...', 0)
 
     const result = await loadFromSupabase(auth.userId, {
-      records: records.records,
-      prosthetics: records.prosthetics,
       cfg: config.cfg,
-      knownMonths: records.knownMonths,
       onProgress
     })
 
@@ -106,7 +124,6 @@ export function useSync() {
       appts.setAppointments(result.appointments)
       records.setRecords(result.records)
       records.setProsthetics(result.prosthetics)
-      records.knownMonths = result.knownMonths
       records.clearDirty()
       debts.clearDirty()
       appts.clearDirty()
@@ -148,37 +165,44 @@ export function useSync() {
     stopRealtime()
     if (!auth.userId) return
 
-    rtChannel = setupRealtime(auth.userId, (payload) => {
+    rtChannels = setupRealtime(auth.userId, (payload) => {
       const ae = document.activeElement
       if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.tagName === 'SELECT')) return
 
       const row = payload.new
       if (!row) return
-      const dt = row.data_type
-      const d = row.data
+      const table = payload.table
 
-      if (dt === 'months') {
-        const curMonth = new Date().toISOString().substring(0, 7)
-        if (row.data_key === curMonth && d) {
-          records.mergeMonthData(curMonth, d)
-          localSave()
-        }
-      } else if (dt === 'debts' && d) {
-        debts.setDebts(d.debts || [])
+      if (table === 'records') {
+        const idx = records.records.findIndex(r => r.id === row.id)
+        if (idx >= 0) records.records[idx] = row
+        else records.records.push(row)
         localSave()
-      } else if (dt === 'config' && d) {
-        config.mergeConfig(d)
-      } else if (dt === 'appointments' && d) {
-        appts.setAppointments(d.items || [])
+      } else if (table === 'prosthetics') {
+        const idx = records.prosthetics.findIndex(p => p.id === row.id)
+        if (idx >= 0) records.prosthetics[idx] = row
+        else records.prosthetics.push(row)
         localSave()
+      } else if (table === 'debts') {
+        const idx = debts.debts.findIndex(d => d.id === row.id)
+        if (idx >= 0) debts.debts[idx] = row
+        else debts.debts.push(row)
+        localSave()
+      } else if (table === 'appointments') {
+        const idx = appts.appointments.findIndex(a => a.id === row.id)
+        if (idx >= 0) appts.appointments[idx] = row
+        else appts.appointments.push(row)
+        localSave()
+      } else if (table === 'user_config') {
+        if (row.config) config.mergeConfig(row.config)
       }
     })
   }
 
   function stopRealtime() {
-    if (rtChannel) {
-      clearRealtime(rtChannel)
-      rtChannel = null
+    if (rtChannels) {
+      clearRealtime(rtChannels)
+      rtChannels = null
     }
   }
 

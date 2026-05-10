@@ -1,5 +1,6 @@
 /**
  * Records Store — manages records and prosthetics data
+ * Phase 2: Uses item-level dirty tracking for normalized tables
  */
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
@@ -8,19 +9,28 @@ import { uid, isProsthetic } from '../utils/helpers'
 export const useRecordsStore = defineStore('records', () => {
   const records = ref([])
   const prosthetics = ref([])
-  const dirtyMonths = ref(new Set())
-  const knownMonths = ref(new Set())
+  const dirtyRecords = ref(new Set())
+  const dirtyProsthetics = ref(new Set())
+  const deletedRecords = ref(new Set())
+  const deletedProsthetics = ref(new Set())
 
   function monthOf(d) {
     return (d || '').substring(0, 7)
   }
 
-  function markMonthDirty(dateStr) {
-    if (dateStr) dirtyMonths.value.add(monthOf(dateStr))
+  function markRecordDirty(id) {
+    if (id) dirtyRecords.value.add(id)
+  }
+
+  function markProstheticDirty(id) {
+    if (id) dirtyProsthetics.value.add(id)
   }
 
   function clearDirty() {
-    dirtyMonths.value.clear()
+    dirtyRecords.value.clear()
+    dirtyProsthetics.value.clear()
+    deletedRecords.value.clear()
+    deletedProsthetics.value.clear()
   }
 
   function setRecords(recs) {
@@ -34,20 +44,20 @@ export const useRecordsStore = defineStore('records', () => {
   function addRecord(rec) {
     if (isProsthetic(rec.service || '')) {
       prosthetics.value.push(rec)
+      markProstheticDirty(rec.id)
     } else {
       records.value.push(rec)
+      markRecordDirty(rec.id)
     }
-    markMonthDirty(rec.date)
   }
 
   function updateRecord(id, updates, isPros) {
     const arr = isPros ? prosthetics.value : records.value
     const idx = arr.findIndex(r => r.id === id)
     if (idx !== -1) {
-      const old = arr[idx]
-      markMonthDirty(old.date)
-      arr[idx] = { ...old, ...updates }
-      markMonthDirty(arr[idx].date)
+      arr[idx] = { ...arr[idx], ...updates }
+      if (isPros) markProstheticDirty(id)
+      else markRecordDirty(id)
     }
   }
 
@@ -55,14 +65,14 @@ export const useRecordsStore = defineStore('records', () => {
     if (isPros) {
       const idx = prosthetics.value.findIndex(r => r.id === id)
       if (idx !== -1) {
-        markMonthDirty(prosthetics.value[idx].date)
         prosthetics.value.splice(idx, 1)
+        deletedProsthetics.value.add(id)
       }
     } else {
       const idx = records.value.findIndex(r => r.id === id)
       if (idx !== -1) {
-        markMonthDirty(records.value[idx].date)
         records.value.splice(idx, 1)
+        deletedRecords.value.add(id)
       }
     }
   }
@@ -82,23 +92,6 @@ export const useRecordsStore = defineStore('records', () => {
     ].sort((a, b) => (a.date > b.date ? -1 : 1))
   }
 
-  function mergeMonthData(month, data) {
-    records.value = records.value.filter(r => monthOf(r.date) !== month)
-    prosthetics.value = prosthetics.value.filter(p => monthOf(p.date) !== month)
-    records.value.push(...(data.records || []))
-    prosthetics.value.push(...(data.prosthetics || []))
-  }
-
-  function rebuildKnownMonths() {
-    const allMonths = [
-      ...new Set([
-        ...records.value.map(r => monthOf(r.date)),
-        ...prosthetics.value.map(p => monthOf(p.date))
-      ])
-    ].filter(Boolean)
-    allMonths.forEach(m => knownMonths.value.add(m))
-  }
-
   function getUniquePatientNames() {
     const names = new Set()
     records.value.forEach(r => { if (r.name) names.add(r.name) })
@@ -114,12 +107,12 @@ export const useRecordsStore = defineStore('records', () => {
   }
 
   return {
-    records, prosthetics, dirtyMonths, knownMonths,
-    monthOf, markMonthDirty, clearDirty,
+    records, prosthetics, dirtyRecords, dirtyProsthetics,
+    deletedRecords, deletedProsthetics,
+    monthOf, markRecordDirty, markProstheticDirty, clearDirty,
     setRecords, setProsthetics,
     addRecord, updateRecord, removeRecord,
     getRecordsByMonth, getProstheticsByMonth, getAllByMonth,
-    mergeMonthData, rebuildKnownMonths,
     getUniquePatientNames, getRecordsForPatient
   }
 })

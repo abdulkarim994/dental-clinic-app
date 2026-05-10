@@ -44,8 +44,16 @@ defineEmits(['loadMonth'])
 const search = ref('')
 
 const sortedMonths = computed(() => {
-  const months = [...recordsStore.knownMonths]
-  return months.sort().reverse()
+  const monthSet = new Set()
+  recordsStore.records.forEach(r => {
+    const m = (r.date || '').substring(0, 7)
+    if (m) monthSet.add(m)
+  })
+  recordsStore.prosthetics.forEach(p => {
+    const m = (p.date || '').substring(0, 7)
+    if (m) monthSet.add(m)
+  })
+  return [...monthSet].sort().reverse()
 })
 
 function formatMonth(m) {
@@ -60,6 +68,6 @@ function getMonthRecordCount(m) {
 }
 
 function getMonthTotal(m) {
-  return sum(recordsStore.getRecordsByMonth(m), 'amount') + sum(recordsStore.getProstheticsByMonth(m), 'amount')
+  return sum(recordsStore.getRecordsByMonth(m), 'amount') + sum(recordsStore.getProstheticsByMonth(m), 'total')
 }
 </script>
