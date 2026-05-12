@@ -32,7 +32,7 @@
         <button class="xt-btn" @click="reset">⟳ إعادة</button>
       </div>
       <div v-if="images.length > 1" class="xray-thumbs">
-        <img v-for="(im, i) in images" :key="i" :src="imgSrc(im)" :class="{ 'xt-sel': i === currentIdx }" @click="goTo(i)">
+        <img v-for="(im, i) in images" :key="i" :src="thumbStripSrc(im)" :class="{ 'xt-sel': i === currentIdx }" @click="goTo(i)" loading="lazy">
       </div>
     </div>
   </Teleport>
@@ -84,6 +84,11 @@ function resetState() {
 function imgSrc(im) {
   if (typeof im === 'string') return im.startsWith('http') || im.startsWith('data:') ? im : getImageUrl(im)
   return im.url || (im.key ? getImageUrl(im.key) : '') || im.src || ''
+}
+
+function thumbStripSrc(im) {
+  if (typeof im === 'string') return im.startsWith('http') || im.startsWith('data:') ? im : getThumbnailUrl(im)
+  return im.url || (im.key ? getThumbnailUrl(im.key) : '') || im.src || ''
 }
 
 const currentSrc = computed(() => props.images[currentIdx.value] ? imgSrc(props.images[currentIdx.value]) : '')

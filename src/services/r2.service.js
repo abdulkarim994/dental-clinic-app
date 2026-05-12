@@ -34,22 +34,41 @@ export async function fetchImageSecure(key) {
   }
 }
 
+const UPLOAD_TIMEOUT = 60000
+const UPLOAD_MAX_RETRIES = 2
+
 export async function uploadImage(file, key, patientName, fileName) {
-  const token = await refreshToken()
+  let lastError = null
+  for (let attempt = 0; attempt <= UPLOAD_MAX_RETRIES; attempt++) {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), UPLOAD_TIMEOUT)
 
-  const res = await fetch(`${R2_WORKER}/upload`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': file.type || 'image/jpeg',
-      'X-Patient-Name': encodeURIComponent(patientName || ''),
-      'X-File-Name': encodeURIComponent(fileName || ''),
-    },
-    body: file,
-  })
+    try {
+      const token = await refreshToken()
+      const res = await fetch(`${R2_WORKER}/upload`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': file.type || 'image/jpeg',
+          'X-Patient-Name': encodeURIComponent(patientName || ''),
+          'X-File-Name': encodeURIComponent(fileName || ''),
+        },
+        body: file,
+        signal: controller.signal,
+      })
 
-  if (!res.ok) throw new Error(`Upload failed: ${res.status}`)
-  return await res.json()
+      clearTimeout(timer)
+      if (!res.ok) throw new Error(`Upload failed: ${res.status}`)
+      return await res.json()
+    } catch (e) {
+      clearTimeout(timer)
+      lastError = e
+      if (attempt < UPLOAD_MAX_RETRIES) {
+        await new Promise(r => setTimeout(r, 1000 * (attempt + 1)))
+      }
+    }
+  }
+  throw lastError
 }
 
 export async function deleteImage(key) {
