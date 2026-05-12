@@ -37,7 +37,7 @@ export default defineConfig({
           if (id.includes('modules/settings')) return 'mod-settings'
           if (id.includes('modules/reports')) return 'mod-reports'
           if (id.includes('modules/prosthetics')) return 'mod-prosthetics'
-          if (id.includes('services/image-pipeline') || id.includes('services/image.service')) return 'image-services'
+          if (id.includes('services/image-pipeline') || id.includes('services/image.service') || id.includes('services/r2.service')) return 'image-services'
           if (id.includes('services/sqlite') || id.includes('services/db-adapter') || id.includes('repositories/')) return 'offline-layer'
         },
       },

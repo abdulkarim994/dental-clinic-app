@@ -12,7 +12,7 @@ export const useRecordsStore = defineStore('records', () => {
   function addRecord(record) {
     const clean = sanitizeRecord(record)
     clean._mod = Date.now()
-    records.value.push(clean)
+    records.value = [...records.value, clean]
     markMonthDirty(clean.date)
     enqueueSyncAction({ type: 'record_add', table: 'records', recordId: clean.id, data: clean }).catch(() => {})
   }
@@ -20,7 +20,9 @@ export const useRecordsStore = defineStore('records', () => {
   function updateRecord(id, updates) {
     const idx = records.value.findIndex(r => r.id === id)
     if (idx !== -1) {
-      records.value[idx] = { ...records.value[idx], ...updates, _mod: Date.now() }
+      const updated = [...records.value]
+      updated[idx] = { ...updated[idx], ...updates, _mod: Date.now() }
+      records.value = updated
       markMonthDirty(records.value[idx].date)
       enqueueSyncAction({ type: 'record_update', table: 'records', recordId: id, data: { id, ...updates } }).catch(() => {})
     }
@@ -30,7 +32,7 @@ export const useRecordsStore = defineStore('records', () => {
     const idx = records.value.findIndex(r => r.id === id)
     if (idx !== -1) {
       markMonthDirty(records.value[idx].date)
-      records.value.splice(idx, 1)
+      records.value = records.value.filter(r => r.id !== id)
       enqueueSyncAction({ type: 'record_delete', table: 'records', recordId: id, data: { id } }).catch(() => {})
     }
   }

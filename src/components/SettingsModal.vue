@@ -496,7 +496,7 @@ function importJSON(e) {
 
 async function doLogout() {
   if (!confirm('تسجيل الخروج؟')) return
-  await auth.logout()
+  await auth.doLogout()
   router.push({ name: 'login' })
 }
 </script>

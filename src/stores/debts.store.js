@@ -10,7 +10,7 @@ export const useDebtsStore = defineStore('debts', () => {
 
   function addDebt(debt) {
     const clean = sanitizeDebt(debt)
-    debts.value.push(clean)
+    debts.value = [...debts.value, clean]
     markDebtsDirty()
     enqueueSyncAction({ type: 'debt_add', table: 'debts', recordId: clean.id, data: clean }).catch(() => {})
   }
@@ -19,7 +19,9 @@ export const useDebtsStore = defineStore('debts', () => {
     const idx = debts.value.findIndex(d => d.id === id)
     if (idx !== -1) {
       const clean = sanitizeDebt(updates)
-      debts.value[idx] = { ...debts.value[idx], ...clean }
+      const updated = [...debts.value]
+      updated[idx] = { ...updated[idx], ...clean }
+      debts.value = updated
       markDebtsDirty()
       enqueueSyncAction({ type: 'debt_update', table: 'debts', recordId: id, data: { id, ...clean } }).catch(() => {})
     }

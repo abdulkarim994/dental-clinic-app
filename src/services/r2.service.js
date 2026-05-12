@@ -50,6 +50,7 @@ export async function uploadImage(file, key, patientName, fileName) {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': file.type || 'image/jpeg',
+          'X-Key': encodeURIComponent(key || ''),
           'X-Patient-Name': encodeURIComponent(patientName || ''),
           'X-File-Name': encodeURIComponent(fileName || ''),
         },
