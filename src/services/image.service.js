@@ -56,12 +56,13 @@ function fileToDataUrl(blob) {
 }
 
 async function saveLocalXrayData(key, dataUrl) {
+  // Write to BOTH IndexedDB (large capacity) AND localStorage (sync read)
   try {
     await saveXrayFallback(key, dataUrl)
-  } catch {
-    // Last resort: try localStorage (may fail on quota)
-    try { localStorage.setItem(`dental_xray_${key}`, dataUrl) } catch { /* ignore */ }
-  }
+  } catch { /* IndexedDB write failed — localStorage fallback below */ }
+  try {
+    localStorage.setItem(`dental_xray_${key}`, dataUrl)
+  } catch { /* localStorage full — IndexedDB fallback above */ }
 }
 
 function getLocalXrayData(key) {
@@ -228,15 +229,30 @@ export async function uploadXrayImage(file, patientName, uid) {
 
   try {
     const result = await uploadImage(compressed, key, patientName, file.name)
-    if (result.success && result.key) {
-      return result.key
+    // Accept various response formats from the R2 worker
+    const serverKey = result?.key || result?.Key || result?.path
+    if (serverKey) {
+      // If server returned a different key, also save thumbnail under server key
+      if (serverKey !== key) {
+        const thumbCached = _imageCache.get(`thumb:${key}`)
+        if (thumbCached) {
+          _imageCache.set(`thumb:${serverKey}`, thumbCached)
+          saveThumbnailData(serverKey, thumbCached)
+        }
+      }
+      return serverKey
+    }
+    // Server responded but without a key — treat as success with local key
+    if (result?.success || result?.ok) {
+      return key
     }
   } catch (err) {
     console.warn('[Image] R2 upload failed, using localStorage fallback:', err.message)
   }
 
+  // Fallback: save full image locally (both IndexedDB + localStorage)
   const dataUrl = await fileToDataUrl(compressed)
-  saveLocalXrayData(key, dataUrl)
+  await saveLocalXrayData(key, dataUrl)
   _imageCache.set(key, dataUrl)
   return key
 }
