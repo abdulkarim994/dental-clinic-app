@@ -23,12 +23,18 @@ const DEFAULT_TIMEOUT = 15000
 const MAX_RETRIES = 3
 const BASE_RETRY_DELAY = 1000
 const MAX_RETRY_DELAY = 10000
+const DEFAULT_CACHE_TTL = 30000 // 30 seconds
+const MAX_CACHE_ENTRIES = 100
 
 // ── In-flight request tracking ──
 
 const _inflightReads = new Map()
 const _inflightWrites = new Map()
 const _activeControllers = new Set()
+
+// ── Query result cache (stale-while-revalidate) ──
+
+const _queryCache = new Map()
 
 /**
  * Create a managed AbortController that is tracked for cleanup.
@@ -59,6 +65,49 @@ export function abortAllRequests() {
   _activeControllers.clear()
   _inflightReads.clear()
   _inflightWrites.clear()
+}
+
+/**
+ * Clear the query result cache. Call on logout or when data is known stale.
+ */
+export function clearQueryCache() {
+  _queryCache.clear()
+}
+
+/**
+ * Invalidate a specific cache entry by data type (and optionally data key).
+ * Use after a write to ensure the next read fetches fresh data.
+ */
+export function invalidateCache(dataType, dataKey = null) {
+  for (const [key] of _queryCache) {
+    if (dataKey !== null) {
+      if (key.endsWith(`:${dataType}:${dataKey}`)) {
+        _queryCache.delete(key)
+        return
+      }
+    } else {
+      if (key.includes(`:${dataType}:`)) {
+        _queryCache.delete(key)
+      }
+    }
+  }
+}
+
+function _getCached(cacheKey, ttl) {
+  const entry = _queryCache.get(cacheKey)
+  if (!entry) return { hit: false, data: null, stale: false }
+  const age = Date.now() - entry.ts
+  if (age < ttl) return { hit: true, data: entry.data, stale: false }
+  return { hit: true, data: entry.data, stale: true }
+}
+
+function _setCache(cacheKey, data) {
+  // Evict oldest entries if cache is full
+  if (_queryCache.size >= MAX_CACHE_ENTRIES) {
+    const oldest = _queryCache.keys().next().value
+    _queryCache.delete(oldest)
+  }
+  _queryCache.set(cacheKey, { data, ts: Date.now() })
 }
 
 /**
@@ -103,6 +152,21 @@ export async function queryRead(uid, dataType, dataKey = '', options = {}) {
   const dedupeKey = `${uid}:${dataType}:${dataKey}`
   const timeout = options.timeout || DEFAULT_TIMEOUT
   const retries = options.retries ?? MAX_RETRIES
+  const cacheTTL = options.cacheTTL ?? DEFAULT_CACHE_TTL
+  const skipCache = options.skipCache === true
+
+  // Check cache first (stale-while-revalidate)
+  if (!skipCache && cacheTTL > 0) {
+    const cached = _getCached(dedupeKey, cacheTTL)
+    if (cached.hit && !cached.stale) {
+      return cached.data
+    }
+    if (cached.hit && cached.stale) {
+      // Return stale data immediately, revalidate in background
+      _revalidateInBackground(uid, dataType, dataKey, dedupeKey, timeout, retries)
+      return cached.data
+    }
+  }
 
   // Return existing in-flight request if available
   if (_inflightReads.has(dedupeKey)) {
@@ -110,12 +174,30 @@ export async function queryRead(uid, dataType, dataKey = '', options = {}) {
   }
 
   const promise = _executeRead(uid, dataType, dataKey, timeout, retries)
+    .then(result => {
+      if (cacheTTL > 0) _setCache(dedupeKey, result)
+      return result
+    })
     .finally(() => {
       _inflightReads.delete(dedupeKey)
     })
 
   _inflightReads.set(dedupeKey, promise)
   return promise
+}
+
+function _revalidateInBackground(uid, dataType, dataKey, cacheKey, timeout, retries) {
+  if (_inflightReads.has(cacheKey)) return // Already revalidating
+  const promise = _executeRead(uid, dataType, dataKey, timeout, retries)
+    .then(result => {
+      _setCache(cacheKey, result)
+      return result
+    })
+    .catch(() => {}) // Background revalidation failure is silent
+    .finally(() => {
+      _inflightReads.delete(cacheKey)
+    })
+  _inflightReads.set(cacheKey, promise)
 }
 
 async function _executeRead(uid, dataType, dataKey, timeout, retries) {
@@ -177,6 +259,9 @@ export async function queryWrite(uid, dataType, dataKey = '', data, options = {}
   const dedupeKey = `${uid}:${dataType}:${dataKey}`
   const timeout = options.timeout || DEFAULT_TIMEOUT
   const retries = options.retries ?? MAX_RETRIES
+
+  // Invalidate cache for this key on write
+  invalidateCache(dataType, dataKey)
 
   // If a write for the same key is in-flight, wait for it then execute ours
   // (we don't skip — the data may have changed)

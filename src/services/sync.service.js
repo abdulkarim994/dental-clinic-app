@@ -1,6 +1,6 @@
-import { sbUpsert, sbGet, supabase } from './supabase.service'
+import { supabase } from './supabase.service'
 import { cacheSaveAll, cacheGetAll } from './cache.service'
-import { queries, abortAllRequests as abortSBQueries } from './supabase-query.service'
+import { queries, queryWrite, queryRead, abortAllRequests as abortSBQueries, invalidateCache } from './supabase-query.service'
 
 const _dirtyMonths = new Set()
 let _debtsDirty = false
@@ -73,7 +73,7 @@ function mergeByMod(existingItems, newItems) {
 }
 
 async function conflictSafeUpsert(uid, dataType, dataKey, newData) {
-  const existing = await sbGet(uid, dataType, dataKey)
+  const existing = await queryRead(uid, dataType, dataKey, { skipCache: true })
   if (existing && existing._ts && newData._ts && existing._ts > newData._ts) {
     const merged = { ...newData }
     if (Array.isArray(existing.records) && Array.isArray(newData.records)) {
@@ -82,9 +82,9 @@ async function conflictSafeUpsert(uid, dataType, dataKey, newData) {
     if (Array.isArray(existing.prosthetics) && Array.isArray(newData.prosthetics)) {
       merged.prosthetics = mergeByMod(existing.prosthetics, newData.prosthetics)
     }
-    return sbUpsert(uid, dataType, dataKey, { ...merged, _ts: Date.now() })
+    return queryWrite(uid, dataType, dataKey, { ...merged, _ts: Date.now() })
   }
-  return sbUpsert(uid, dataType, dataKey, { ...newData, _ts: Date.now() })
+  return queryWrite(uid, dataType, dataKey, { ...newData, _ts: Date.now() })
 }
 
 export async function saveToSupabase(uid, { records, prosthetics, debts, config, appointments }, showOl = false) {
@@ -107,7 +107,7 @@ export async function saveToSupabase(uid, { records, prosthetics, debts, config,
     }
 
     const allKnown = [...new Set([..._knownMonths, ...monthsToSave])].filter(Boolean).sort()
-    ops.push(sbUpsert(uid, 'index', '', { months: allKnown }))
+    ops.push(queries.saveIndex(uid, { months: allKnown }))
 
     for (const m of monthsToSave) {
       const doc = buildMonthDoc(m, records, prosthetics)
@@ -117,15 +117,15 @@ export async function saveToSupabase(uid, { records, prosthetics, debts, config,
 
     const savedDebts = showOl || _debtsDirty
     if (savedDebts) {
-      ops.push(sbUpsert(uid, 'debts', '', debts))
+      ops.push(queries.saveDebts(uid, debts))
     }
 
     const savedAppts = showOl || _apptsDirty
     if (savedAppts) {
-      ops.push(sbUpsert(uid, 'appointments', '', appointments))
+      ops.push(queries.saveAppointments(uid, appointments))
     }
 
-    ops.push(sbUpsert(uid, 'config', '', config))
+    ops.push(queries.saveConfig(uid, config))
 
     await Promise.all(ops)
 
@@ -156,7 +156,7 @@ async function batchFetchMonths(uid, months, batchSize = 5) {
   const results = []
   for (let i = 0; i < months.length; i += batchSize) {
     const batch = months.slice(i, i + batchSize)
-    const batchResults = await Promise.all(batch.map(m => sbGet(uid, 'month', m)))
+    const batchResults = await Promise.all(batch.map(m => queries.getMonth(uid, m)))
     results.push(...batchResults)
     batch.forEach(m => _loadedMonths.add(m))
   }
@@ -240,16 +240,25 @@ export async function loadAllMonths(uid) {
   return results
 }
 
+let _activeChannel = null
+
 export function setupRealtimeSubscriptions(uid, onUpdate) {
+  // Prevent duplicate subscriptions — clean up existing channel first
+  if (_activeChannel) {
+    supabase.removeChannel(_activeChannel)
+    _activeChannel = null
+  }
+
   const unsubs = []
   let debounceTimer = null
   const DEBOUNCE_MS = 5000
   let _pendingPayloads = []
 
   function debouncedUpdate(payload) {
-    // Collect changed data_type so onUpdate knows what changed
     if (payload?.new?.data_type) {
       _pendingPayloads.push(payload.new.data_type)
+      // Invalidate query cache for changed types so next read fetches fresh
+      invalidateCache(payload.new.data_type, payload?.new?.data_key || null)
     }
 
     if (debounceTimer) clearTimeout(debounceTimer)
@@ -262,11 +271,11 @@ export function setupRealtimeSubscriptions(uid, onUpdate) {
   }
 
   const channel = supabase
-    .channel('user_data_changes')
+    .channel(`user_data_${uid}`)
     .on(
       'postgres_changes',
       {
-        event: 'UPDATE',
+        event: '*',
         schema: 'public',
         table: 'user_data',
         filter: `user_id=eq.${uid}`,
@@ -275,10 +284,15 @@ export function setupRealtimeSubscriptions(uid, onUpdate) {
     )
     .subscribe()
 
+  _activeChannel = channel
+
   unsubs.push(() => {
     clearTimeout(debounceTimer)
     _pendingPayloads = []
-    supabase.removeChannel(channel)
+    if (_activeChannel === channel) {
+      supabase.removeChannel(channel)
+      _activeChannel = null
+    }
   })
   return unsubs
 }
