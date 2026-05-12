@@ -1,18 +1,31 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { login, register, logout, getSession, onAuthStateChange } from '@/services/auth.service'
+import { login, register, logout, getSession, restoreSessionFromSecureStorage, onAuthStateChange } from '@/services/auth.service'
 import { secureSetSession, secureClearSession } from '@/services/secure-storage.service'
+import { setPermissionContext, clearPermissionContext } from '@/services/permissions.service'
+import { logError, ErrorCategory } from '@/services/error.service'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref(null)
   const uid = ref(null)
   const loading = ref(false)
   const error = ref('')
+  const sessionRestored = ref(false)
 
   const isLoggedIn = computed(() => !!user.value)
   const userEmail = computed(() => user.value?.email || '')
 
   const rememberSession = ref(true)
+
+  function _setUser(u) {
+    user.value = u
+    uid.value = u?.id || null
+    if (u?.id) {
+      setPermissionContext(u.id, 'owner')
+    } else {
+      clearPermissionContext()
+    }
+  }
 
   async function doLogin(email, password, remember = true) {
     loading.value = true
@@ -20,8 +33,7 @@ export const useAuthStore = defineStore('auth', () => {
     rememberSession.value = remember
     try {
       const data = await login(email, password)
-      user.value = data.user
-      uid.value = data.user?.id || null
+      _setUser(data.user)
       if (data.session && remember) secureSetSession(data.session)
     } catch (e) {
       error.value = e.message
@@ -46,31 +58,48 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function doLogout() {
-    await logout()
-    user.value = null
-    uid.value = null
+    try {
+      await logout()
+    } catch (e) {
+      logError(e, { source: 'auth.store.doLogout', category: ErrorCategory.AUTH })
+    }
+    _setUser(null)
     secureClearSession()
+    sessionRestored.value = false
   }
 
   async function checkSession() {
-    const session = await getSession()
-    if (session?.user) {
-      user.value = session.user
-      uid.value = session.user.id
+    try {
+      const session = await getSession()
+      if (session?.user) {
+        _setUser(session.user)
+        sessionRestored.value = true
+        return session
+      }
+
+      // Crash recovery: try restoring from encrypted storage
+      if (!sessionRestored.value) {
+        const restored = await restoreSessionFromSecureStorage()
+        if (restored?.user) {
+          _setUser(restored.user)
+          sessionRestored.value = true
+          return restored
+        }
+      }
+    } catch (e) {
+      logError(e, { source: 'auth.store.checkSession', category: ErrorCategory.AUTH })
     }
-    return session
+    return null
   }
 
   function initAuthListener(onLogin, onLogout) {
     return onAuthStateChange((event, session) => {
       if (session?.user) {
         if (uid.value === session.user.id) return
-        user.value = session.user
-        uid.value = session.user.id
+        _setUser(session.user)
         onLogin?.(session)
       } else {
-        user.value = null
-        uid.value = null
+        _setUser(null)
         onLogout?.()
       }
     })
@@ -81,6 +110,7 @@ export const useAuthStore = defineStore('auth', () => {
     uid,
     loading,
     error,
+    sessionRestored,
     isLoggedIn,
     userEmail,
     rememberSession,
