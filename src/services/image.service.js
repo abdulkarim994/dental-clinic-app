@@ -1,5 +1,6 @@
 import { r2Url, fetchImageSecure, uploadImage, deleteImage, compressImage, createThumbnail } from './r2.service'
 import { saveThumbnailToIDB, getThumbnailFromIDB, removeThumbnailFromIDB } from './image-pipeline.service'
+import { saveXrayFallback, getXrayFallback, removeXrayFallback } from './sqlite.service'
 
 const _imageCache = new Map()
 const _thumbPromises = new Map() // Async thumbnail resolution cache
@@ -27,11 +28,20 @@ export function getImageUrl(key) {
   const url = r2Url(key)
   _imageCache.set(key, url)
   evictOldest()
-  // Async upgrade: replace token-in-URL with secure blob URL
-  fetchImageSecure(key).then(blobUrl => {
-    if (blobUrl && blobUrl !== url) {
-      _imageCache.set(key, blobUrl)
+  // Async upgrade: check IndexedDB, then fetch secure blob
+  getLocalXrayDataAsync(key).then(idbData => {
+    if (idbData) {
+      _imageCache.set(key, idbData)
+      return
     }
+    return fetchImageSecure(key).then(blobUrl => {
+      if (blobUrl && blobUrl !== url) {
+        // Revoke old blob URL if we're replacing one
+        if (url.startsWith('blob:')) _revokeTrackedBlob(url)
+        _imageCache.set(key, blobUrl)
+        _trackBlob(blobUrl)
+      }
+    })
   }).catch(() => {})
   return url
 }
@@ -45,15 +55,17 @@ function fileToDataUrl(blob) {
   })
 }
 
-function saveLocalXrayData(key, dataUrl) {
+async function saveLocalXrayData(key, dataUrl) {
   try {
-    localStorage.setItem(`dental_xray_${key}`, dataUrl)
+    await saveXrayFallback(key, dataUrl)
   } catch {
-    console.warn('[Image] localStorage full, cannot save xray locally')
+    // Last resort: try localStorage (may fail on quota)
+    try { localStorage.setItem(`dental_xray_${key}`, dataUrl) } catch { /* ignore */ }
   }
 }
 
 function getLocalXrayData(key) {
+  // Sync check: localStorage only (for backward compatibility)
   try {
     return localStorage.getItem(`dental_xray_${key}`) || null
   } catch {
@@ -61,10 +73,20 @@ function getLocalXrayData(key) {
   }
 }
 
-function removeLocalXrayData(key) {
+async function getLocalXrayDataAsync(key) {
+  // Check localStorage first, then IndexedDB
+  const lsData = getLocalXrayData(key)
+  if (lsData) return lsData
   try {
-    localStorage.removeItem(`dental_xray_${key}`)
-  } catch { /* ignore */ }
+    return await getXrayFallback(key)
+  } catch {
+    return null
+  }
+}
+
+async function removeLocalXrayData(key) {
+  try { await removeXrayFallback(key) } catch { /* ignore */ }
+  try { localStorage.removeItem(`dental_xray_${key}`) } catch { /* ignore */ }
 }
 
 function saveThumbnailData(key, dataUrl) {
@@ -131,6 +153,32 @@ function removeThumbnailData(key) {
   try {
     localStorage.removeItem(`dental_xray_thumb_${key}`)
   } catch { /* ignore */ }
+}
+
+// ── Blob URL tracking (memory leak prevention) ──
+
+const _trackedBlobs = new Set()
+
+function _trackBlob(url) {
+  if (url && url.startsWith('blob:')) _trackedBlobs.add(url)
+}
+
+function _revokeTrackedBlob(url) {
+  if (_trackedBlobs.has(url)) {
+    try { URL.revokeObjectURL(url) } catch { /* ignore */ }
+    _trackedBlobs.delete(url)
+  }
+}
+
+export function revokeAllImageBlobs() {
+  for (const url of _trackedBlobs) {
+    try { URL.revokeObjectURL(url) } catch { /* ignore */ }
+  }
+  _trackedBlobs.clear()
+}
+
+export function getTrackedBlobCount() {
+  return _trackedBlobs.size
 }
 
 export function getThumbnailUrl(key) {
@@ -200,20 +248,28 @@ export async function uploadXrayImage(file, patientName, uid) {
  */
 export async function getImageSecure(key) {
   if (_imageCache.has(`secure:${key}`)) return _imageCache.get(`secure:${key}`)
-  const localData = getLocalXrayData(key)
+  const localData = await getLocalXrayDataAsync(key)
   if (localData) return localData
   const blobUrl = await fetchImageSecure(key)
   if (blobUrl) {
     _imageCache.set(`secure:${key}`, blobUrl)
+    _trackBlob(blobUrl)
     evictOldest()
   }
   return blobUrl || getImageUrl(key)
 }
 
 export async function deleteXrayImage(key) {
+  // Revoke any tracked blob URLs for this key
+  const cachedUrl = _imageCache.get(key)
+  if (cachedUrl) _revokeTrackedBlob(cachedUrl)
+  const secureUrl = _imageCache.get(`secure:${key}`)
+  if (secureUrl) _revokeTrackedBlob(secureUrl)
+
   _imageCache.delete(key)
+  _imageCache.delete(`secure:${key}`)
   _imageCache.delete(`thumb:${key}`)
-  removeLocalXrayData(key)
+  await removeLocalXrayData(key)
   removeThumbnailData(key)
   try {
     await deleteImage(key)

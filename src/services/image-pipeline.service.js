@@ -225,6 +225,25 @@ export function preloadAdjacent(images, currentIdx, getUrlFn) {
   }
 }
 
+// ── Batch thumbnail preload ──
+
+/**
+ * Preload thumbnails for a batch of xray keys into the memory cache.
+ * Reads from IndexedDB in parallel, avoiding N sequential IDB reads.
+ */
+export async function batchPreloadThumbnails(keys, getThumbFn) {
+  if (!keys || !keys.length) return
+  const BATCH = 10
+  for (let i = 0; i < keys.length; i += BATCH) {
+    const batch = keys.slice(i, i + BATCH)
+    await Promise.all(batch.map(key => {
+      const k = typeof key === 'string' ? key : key.key || key
+      if (!k) return Promise.resolve()
+      return getThumbFn(k).catch(() => null)
+    }))
+  }
+}
+
 // ── Cleanup ──
 
 const THUMBNAIL_LS_PREFIX = 'dental_xray_thumb_'

@@ -5,7 +5,7 @@
  */
 
 const DB_NAME = 'dental_clinic_db'
-const DB_VERSION = 3
+const DB_VERSION = 4
 const STORES = {
   patients: 'patients',
   appointments: 'appointments',
@@ -15,6 +15,7 @@ const STORES = {
   metadata: 'metadata',
   pendingUploads: 'pendingUploads',
   syncMeta: 'syncMeta',
+  xrayFallback: 'xrayFallback',
 }
 
 let _db = null
@@ -50,6 +51,9 @@ export function openDB() {
       }
       if (!db.objectStoreNames.contains(STORES.syncMeta)) {
         db.createObjectStore(STORES.syncMeta, { keyPath: 'key' })
+      }
+      if (!db.objectStoreNames.contains(STORES.xrayFallback)) {
+        db.createObjectStore(STORES.xrayFallback, { keyPath: 'key' })
       }
     }
     request.onsuccess = () => {
@@ -253,6 +257,24 @@ export function applyOptimistic(storeRef, action, data) {
   } else if (action === 'delete') {
     storeRef.value = storeRef.value.filter(r => r.id !== data.id)
   }
+}
+
+// ── X-ray Fallback Store (replaces localStorage for full images) ──
+
+export async function saveXrayFallback(key, dataUrl) {
+  const store = await getStore(STORES.xrayFallback, 'readwrite')
+  return promisifyRequest(store.put({ key, dataUrl, ts: Date.now() }))
+}
+
+export async function getXrayFallback(key) {
+  const store = await getStore(STORES.xrayFallback)
+  const result = await promisifyRequest(store.get(key))
+  return result?.dataUrl || null
+}
+
+export async function removeXrayFallback(key) {
+  const store = await getStore(STORES.xrayFallback, 'readwrite')
+  return promisifyRequest(store.delete(key))
 }
 
 // ── DB Cleanup ──
