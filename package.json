@@ -1,5 +1,5 @@
 {
-  "name": "dental-clinic",
+  "name": "dental-clinic-app",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@capacitor-community/sqlite": "^8.1.0",
     "@capacitor/cli": "^8.3.3",
     "@capacitor/core": "^8.3.3",
     "@supabase/supabase-js": "^2.105.4",

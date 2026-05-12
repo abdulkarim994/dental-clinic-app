@@ -1,91 +1,49 @@
-/**
- * Shared utility helpers
- */
+import { formatNumber } from './format'
 
-/**
- * Format number with locale formatting
- */
+export function sortByNewest(arr) {
+  return arr.slice().sort((a, b) => {
+    const am = a._mod || new Date(a.date || '1970-01-01').getTime()
+    const bm = b._mod || new Date(b.date || '1970-01-01').getTime()
+    return bm - am
+  })
+}
+
+export function sum(arr, key) {
+  return arr.reduce((s, item) => s + (Number(item[key]) || 0), 0)
+}
+
+export function isProsDebtPay(r, debts) {
+  if (!r.isDebtPayment || !r.debtId) return false
+  const d = debts.find(x => x.id === r.debtId)
+  return d?.type === 'prosthetic'
+}
+
+export function prosDocEarnings(cp, pdPays) {
+  const nonDebt = cp.filter(p => !p.isDebt)
+  const pCash = sum(nonDebt.filter(p => p.payment === 'كاش'), 'doctorShare') +
+    sum(pdPays.filter(r => r.payment === 'كاش'), 'amount')
+  const pXfer = sum(nonDebt.filter(p => p.payment !== 'كاش'), 'doctorShare') +
+    sum(pdPays.filter(r => r.payment !== 'كاش'), 'amount')
+  return { pCash, pXfer, pDoc: pCash + pXfer }
+}
+
+export function recDateFilter(r, filterType, month) {
+  if (!r.date) return false
+  if (filterType === 'all') return true
+  const today = new Date().toISOString().substring(0, 10)
+  if (filterType === 'today') return r.date === today
+  if (filterType === 'week') {
+    const d = new Date()
+    const day = d.getDay() || 7
+    const mon = new Date(d)
+    mon.setDate(d.getDate() - (day - 1))
+    const sun = new Date(mon)
+    sun.setDate(mon.getDate() + 6)
+    return r.date >= mon.toISOString().substring(0, 10) && r.date <= sun.toISOString().substring(0, 10)
+  }
+  return r.date?.startsWith(month)
+}
+
 export function n(v) {
-  if (v == null || isNaN(Number(v))) return '0'
-  return Number(v).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
-}
-
-/**
- * Sum an array of objects by key
- */
-export function sum(arr, k) {
-  return arr.reduce((s, x) => s + (Number(x[k]) || 0), 0)
-}
-
-/**
- * Delay utility
- */
-export function delay(ms) {
-  return new Promise(r => setTimeout(r, ms))
-}
-
-/**
- * Check if a service is prosthetic type
- */
-export function isProsthetic(s) {
-  return /(تركيب|بروتيز|جسر|طقم|crown|prosth)/i.test(s) || s === 'تركيبات'
-}
-
-/**
- * Generate empty state HTML
- */
-export function emptyHtml(ico, txt) {
-  return `<div class="text-center py-12 opacity-25"><div class="text-4xl mb-2">${ico}</div><p class="text-xs">${txt}</p></div>`
-}
-
-/**
- * Generate unique ID
- */
-export function uid() {
-  return Date.now().toString(36) + Math.random().toString(36).substring(2, 7)
-}
-
-/**
- * Get month string from Date or ISO string
- */
-export function getMonthStr(d) {
-  if (typeof d === 'string') return d.substring(0, 7)
-  return d.toISOString().substring(0, 7)
-}
-
-/**
- * Format date for display (Arabic)
- */
-export function formatDate(dateStr) {
-  if (!dateStr) return ''
-  try {
-    return new Date(dateStr).toLocaleDateString('ar-LY', { year: 'numeric', month: 'short', day: 'numeric' })
-  } catch {
-    return dateStr
-  }
-}
-
-/**
- * Get today's date as YYYY-MM-DD
- */
-export function todayStr() {
-  return new Date().toISOString().substring(0, 10)
-}
-
-/**
- * Get current month as YYYY-MM
- */
-export function currentMonth() {
-  return new Date().toISOString().substring(0, 7)
-}
-
-/**
- * Debounce function
- */
-export function debounce(fn, wait = 300) {
-  let timer
-  return function (...args) {
-    clearTimeout(timer)
-    timer = setTimeout(() => fn.apply(this, args), wait)
-  }
+  return formatNumber(v)
 }

@@ -1,86 +1,43 @@
-/**
- * Debts Store — manages patient debts and installments
- */
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
-import { uid } from '../utils/helpers'
+import { ref } from 'vue'
+import { markDebtsDirty } from '@/services/sync.service'
+import { enqueueSyncAction } from '@/services/sync-queue.service'
+import { sanitizeDebt } from '@/utils/sanitize'
 
 export const useDebtsStore = defineStore('debts', () => {
   const debts = ref([])
-  const dirty = ref(false)
-
-  const activeDebts = computed(() => debts.value.filter(d => !d.settled))
-  const settledDebts = computed(() => debts.value.filter(d => d.settled))
-
-  const totalDebt = computed(() =>
-    activeDebts.value.reduce((s, d) => s + (Number(d.amount) || 0), 0)
-  )
-
-  const totalPaid = computed(() =>
-    activeDebts.value.reduce((s, d) => {
-      const payments = d.payments || []
-      return s + payments.reduce((ps, p) => ps + (Number(p.amount) || 0), 0)
-    }, 0)
-  )
-
-  const debtCount = computed(() => activeDebts.value.length)
-
-  function setDebts(d) {
-    debts.value = d
-  }
+  const isLoadedFromCache = ref(false)
 
   function addDebt(debt) {
-    debts.value.push({ ...debt, id: debt.id || uid() })
-    dirty.value = true
+    const clean = sanitizeDebt(debt)
+    debts.value = [...debts.value, clean]
+    markDebtsDirty()
+    enqueueSyncAction({ type: 'debt_add', table: 'debts', recordId: clean.id, data: clean }).catch(() => {})
   }
 
   function updateDebt(id, updates) {
     const idx = debts.value.findIndex(d => d.id === id)
     if (idx !== -1) {
-      debts.value[idx] = { ...debts.value[idx], ...updates }
-      dirty.value = true
+      const clean = sanitizeDebt(updates)
+      const updated = [...debts.value]
+      updated[idx] = { ...updated[idx], ...clean }
+      debts.value = updated
+      markDebtsDirty()
+      enqueueSyncAction({ type: 'debt_update', table: 'debts', recordId: id, data: { id, ...clean } }).catch(() => {})
     }
   }
 
-  function removeDebt(id) {
+  function deleteDebt(id) {
     debts.value = debts.value.filter(d => d.id !== id)
-    dirty.value = true
-  }
-
-  function addPayment(debtId, payment) {
-    const debt = debts.value.find(d => d.id === debtId)
-    if (debt) {
-      if (!debt.payments) debt.payments = []
-      debt.payments.push({ ...payment, id: uid() })
-      dirty.value = true
-    }
-  }
-
-  function settleDebt(id) {
-    const debt = debts.value.find(d => d.id === id)
-    if (debt) {
-      debt.settled = true
-      dirty.value = true
-    }
-  }
-
-  function getDebtsByPatient(name) {
-    return debts.value.filter(d => d.name === name)
-  }
-
-  function getActiveDebtsByPatient(name) {
-    return debts.value.filter(d => d.name === name && !d.settled)
-  }
-
-  function clearDirty() {
-    dirty.value = false
+    markDebtsDirty()
+    enqueueSyncAction({ type: 'debt_delete', table: 'debts', recordId: id, data: { id } }).catch(() => {})
   }
 
   return {
-    debts, dirty,
-    activeDebts, settledDebts, totalDebt, totalPaid, debtCount,
-    setDebts, addDebt, updateDebt, removeDebt,
-    addPayment, settleDebt,
-    getDebtsByPatient, getActiveDebtsByPatient, clearDirty
+    debts,
+    isLoadedFromCache,
+    addDebt,
+    updateDebt,
+    deleteDebt,
   }
 })

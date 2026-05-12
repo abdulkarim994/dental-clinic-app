@@ -1,100 +1,134 @@
-/**
- * Cache Service — localStorage persistence layer
- * Handles saving/loading app state to localStorage
- */
+import { cachePatients, getCachedPatients, cacheAppointments, getCachedAppointments, cacheDebts, getCachedDebts, initDB } from './sqlite.service'
+import { cacheSupabaseData } from './background-sync.service'
 
-function cacheKey(userId, type) {
-  return `dental_${userId}_${type}`
+const PREFIX = 'dental_'
+let _idbReady = false
+
+export async function initCache() {
+  _idbReady = await initDB()
 }
 
-/**
- * Save all app state to localStorage
- */
-export function cacheSave(userId, { records, prosthetics, debts, cfg, appointments }) {
+function key(uid, type) {
+  return `${PREFIX}${uid}_${type}`
+}
+
+export function cacheGet(uid, type) {
   try {
-    localStorage.setItem(cacheKey(userId, 'rec'), JSON.stringify(records))
-    localStorage.setItem(cacheKey(userId, 'pro'), JSON.stringify(prosthetics))
-    localStorage.setItem(cacheKey(userId, 'dbt'), JSON.stringify(debts))
-    localStorage.setItem(cacheKey(userId, 'cfg'), JSON.stringify(cfg))
-    localStorage.setItem(cacheKey(userId, 'appt'), JSON.stringify(appointments))
-  } catch (e) {
-    console.error('LS save:', e)
+    const raw = localStorage.getItem(key(uid, type))
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
   }
 }
 
-/**
- * Load app state from localStorage
- */
-export function cacheLoad(userId, defaultCfg) {
+export function cacheSet(uid, type, data) {
   try {
-    const r = localStorage.getItem(cacheKey(userId, 'rec'))
-    const p = localStorage.getItem(cacheKey(userId, 'pro'))
-    const d = localStorage.getItem(cacheKey(userId, 'dbt'))
-    const c = localStorage.getItem(cacheKey(userId, 'cfg'))
-    const a = localStorage.getItem(cacheKey(userId, 'appt'))
-
-    return {
-      records: r ? (JSON.parse(r) || []) : [],
-      prosthetics: p ? (JSON.parse(p) || []) : [],
-      debts: d ? (JSON.parse(d) || []) : [],
-      cfg: c ? { ...defaultCfg, ...JSON.parse(c) } : { ...defaultCfg },
-      appointments: a ? (JSON.parse(a) || []) : []
-    }
+    const k = key(uid, type)
+    localStorage.setItem(k, JSON.stringify(data))
+    localStorage.setItem(`${k}_ts`, String(Date.now()))
   } catch (e) {
-    console.error('LS load:', e)
-    return { records: [], prosthetics: [], debts: [], cfg: { ...defaultCfg }, appointments: [] }
+    console.warn('[Cache] Storage full or unavailable:', e)
   }
 }
 
-/**
- * Get/set fast mode flag
- */
-export function getFastMode() {
-  return localStorage.getItem('dental_fastMode') === '1'
+export function getAge(uid, type) {
+  try {
+    const ts = localStorage.getItem(`${key(uid, type)}_ts`)
+    return ts ? Date.now() - Number(ts) : Infinity
+  } catch {
+    return Infinity
+  }
 }
 
-export function setFastMode(enabled) {
-  localStorage.setItem('dental_fastMode', enabled ? '1' : '0')
+export function cacheClear(uid) {
+  const prefix = `${PREFIX}${uid}_`
+  const keys = []
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i)
+    if (k && k.startsWith(prefix)) keys.push(k)
+  }
+  keys.forEach(k => localStorage.removeItem(k))
 }
 
-/**
- * Get/set theme preference
- */
-export function getTheme() {
-  return localStorage.getItem('dental_theme') || 'dark'
-}
-
-export function setTheme(theme) {
-  localStorage.setItem('dental_theme', theme)
-}
-
-/**
- * Get/set font size preference
- */
-export function getFontSize() {
-  return localStorage.getItem('dental_fontSize') || 'fs-medium'
-}
-
-export function setFontSize(cls) {
-  localStorage.setItem('dental_fontSize', cls)
-}
-
-/**
- * Save/load login credentials (remember me)
- */
-export function saveCredentials(email, password) {
-  localStorage.setItem('dental_rem_email', email)
-  localStorage.setItem('dental_rem_pass', password)
-}
-
-export function loadCredentials() {
+export function cacheGetAll(uid) {
   return {
-    email: localStorage.getItem('dental_rem_email') || '',
-    password: localStorage.getItem('dental_rem_pass') || ''
+    records: cacheGet(uid, 'rec') || [],
+    prosthetics: cacheGet(uid, 'pro') || [],
+    debts: cacheGet(uid, 'dbt') || [],
+    config: cacheGet(uid, 'cfg'),
+    appointments: cacheGet(uid, 'appt') || [],
   }
 }
 
-export function clearCredentials() {
-  localStorage.removeItem('dental_rem_email')
-  localStorage.removeItem('dental_rem_pass')
+export function cacheSaveAll(uid, { records, prosthetics, debts, config, appointments }) {
+  // Only cache config in localStorage (small). Large arrays use IndexedDB + repos.
+  if (config) cacheSet(uid, 'cfg', config)
+  // Cache record/debt counts for quick offline display without full deserialization
+  if (records) cacheSet(uid, 'rec_count', records.length)
+  if (debts) cacheSet(uid, 'dbt_count', debts.length)
+
+  if (_idbReady) {
+    const patientMap = new Map()
+    const allRecs = [...(records || []), ...(prosthetics || [])]
+    for (const r of allRecs) {
+      if (!r.name) continue
+      const existing = patientMap.get(r.name) || { id: r.name, name: r.name, records: [], lastVisit: null }
+      existing.records.push(r.id)
+      if (!existing.lastVisit || r.date > existing.lastVisit) existing.lastVisit = r.date
+      patientMap.set(r.name, existing)
+    }
+    cachePatients([...patientMap.values()]).catch(() => {})
+    if (appointments) cacheAppointments(appointments).catch(() => {})
+    if (debts) cacheDebts(debts).catch(() => {})
+  }
+
+  // Also populate the new repository layer (non-blocking, safe to fail)
+  cacheSupabaseData({ records, prosthetics, appointments }).catch(() => {})
+}
+
+export async function getCachedPatientsFromDB() {
+  if (!_idbReady) return []
+  try {
+    return await getCachedPatients()
+  } catch {
+    return []
+  }
+}
+
+export async function getCachedAppointmentsFromDB() {
+  if (!_idbReady) return []
+  try {
+    return await getCachedAppointments()
+  } catch {
+    return []
+  }
+}
+
+export async function getCachedDebtsFromDB() {
+  if (!_idbReady) return []
+  try {
+    return await getCachedDebts()
+  } catch {
+    return []
+  }
+}
+
+// ── Patient Photo Storage ──
+// Lightweight localStorage helpers. Kept here (not in image.service) to avoid
+// pulling the 206KB image-services chunk into the store startup path.
+
+export function getPatientPhotoFromStorage(name) {
+  try {
+    return localStorage.getItem(`dental_photo_${name}`) || null
+  } catch {
+    return null
+  }
+}
+
+export function savePatientPhotoToStorage(name, dataUrl) {
+  try {
+    localStorage.setItem(`dental_photo_${name}`, dataUrl)
+  } catch {
+    console.warn('[Cache] Cannot save patient photo to storage')
+  }
 }
