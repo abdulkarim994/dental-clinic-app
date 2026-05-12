@@ -61,11 +61,11 @@ export function cacheGetAll(uid) {
 }
 
 export function cacheSaveAll(uid, { records, prosthetics, debts, config, appointments }) {
-  if (records) cacheSet(uid, 'rec', records)
-  if (prosthetics) cacheSet(uid, 'pro', prosthetics)
-  if (debts) cacheSet(uid, 'dbt', debts)
+  // Only cache config in localStorage (small). Large arrays use IndexedDB + repos.
   if (config) cacheSet(uid, 'cfg', config)
-  if (appointments) cacheSet(uid, 'appt', appointments)
+  // Cache record/debt counts for quick offline display without full deserialization
+  if (records) cacheSet(uid, 'rec_count', records.length)
+  if (debts) cacheSet(uid, 'dbt_count', debts.length)
 
   if (_idbReady) {
     const patientMap = new Map()

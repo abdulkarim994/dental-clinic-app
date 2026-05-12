@@ -105,7 +105,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { isOnline, onOnlineStatusChange, processQueue } from '@/services/offline-queue'
 import { ensureMonthLoaded, loadAllMonths, mergeMonthData, setupRealtimeSubscriptions, clearRealtimeSubscriptions } from '@/services/sync.service'
 import { setAuthErrorHandler, clearPendingRequests } from '@/services/supabase.service'
-import { abortAllRequests as abortSBQueries } from '@/services/supabase-query.service'
+import { abortAllRequests as abortSBQueries, clearQueryCache } from '@/services/supabase-query.service'
 import { logError, ErrorCategory } from '@/services/error.service'
 import { cleanupOrphanedThumbnails, getAllActiveXrayKeys } from '@/services/image-pipeline.service'
 import { useRouter, useRoute } from 'vue-router'
@@ -293,5 +293,6 @@ onUnmounted(() => {
   setAuthErrorHandler(null)
   clearPendingRequests()
   abortSBQueries()
+  clearQueryCache()
 })
 </script>
