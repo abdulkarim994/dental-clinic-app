@@ -1,12 +1,12 @@
 import { defineStore } from 'pinia'
-import { ref, shallowRef } from 'vue'
+import { ref } from 'vue'
 import { markMonthDirty } from '@/services/sync.service'
 import { sanitizeRecord } from '@/utils/sanitize'
 import { enqueueSyncAction } from '@/services/sync-queue.service'
 
 export const useRecordsStore = defineStore('records', () => {
-  const records = shallowRef([])
-  const prosthetics = shallowRef([])
+  const records = ref([])
+  const prosthetics = ref([])
   const isLoadedFromCache = ref(false)
 
   function addRecord(record) {

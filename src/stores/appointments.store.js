@@ -1,11 +1,11 @@
 import { defineStore } from 'pinia'
-import { ref, shallowRef } from 'vue'
+import { ref } from 'vue'
 import { markApptsDirty } from '@/services/sync.service'
 import { enqueueSyncAction } from '@/services/sync-queue.service'
 import { sanitizeAppointment } from '@/utils/sanitize'
 
 export const useAppointmentsStore = defineStore('appointments', () => {
-  const appointments = shallowRef([])
+  const appointments = ref([])
   const isLoadedFromCache = ref(false)
 
   function addAppointment(appt) {
