@@ -13,9 +13,19 @@ export function escapeHtml(str) {
 
 export function sanitizeInput(val) {
   if (typeof val !== 'string') return val
-  return val.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-    .replace(/on\w+="[^"]*"/gi, '')
-    .replace(/javascript:/gi, '')
+  return val
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '')
+    .replace(/on\w+\s*=\s*[^\s>]+/gi, '')
+    .replace(/javascript\s*:/gi, '')
+    .replace(/data\s*:\s*text\/html/gi, '')
+    .replace(/vbscript\s*:/gi, '')
+    .replace(/<iframe[^>]*>/gi, '')
+    .replace(/<object[^>]*>/gi, '')
+    .replace(/<embed[^>]*>/gi, '')
+    .replace(/<form[^>]*>/gi, '')
+    .replace(/expression\s*\(/gi, '')
+    .replace(/url\s*\(\s*["']?javascript/gi, '')
     .trim()
 }
 
@@ -104,5 +114,38 @@ export function validateConfig(config) {
   if (clean.syncMin !== undefined) {
     clean.syncMin = Math.max(1, Math.min(Number(clean.syncMin) || 30, 1440))
   }
+  if (clean.doctorPct !== undefined) {
+    clean.doctorPct = Math.max(0, Math.min(Number(clean.doctorPct) || 50, 100))
+  }
+  if (Array.isArray(clean.clinics)) {
+    clean.clinics = clean.clinics.map(c => typeof c === 'string' ? sanitizeInput(c) : c)
+  }
+  if (Array.isArray(clean.services)) {
+    clean.services = clean.services.map(s => typeof s === 'string' ? sanitizeInput(s) : s)
+  }
   return clean
+}
+
+/**
+ * Sanitize an email address.
+ */
+export function sanitizeEmail(email) {
+  if (typeof email !== 'string') return ''
+  return email.trim().toLowerCase().replace(/[^a-z0-9@._+\-]/g, '').substring(0, 254)
+}
+
+/**
+ * Deep sanitize all string values in an object.
+ */
+export function deepSanitize(obj) {
+  if (typeof obj === 'string') return sanitizeInput(obj)
+  if (Array.isArray(obj)) return obj.map(deepSanitize)
+  if (obj && typeof obj === 'object') {
+    const result = {}
+    for (const [key, val] of Object.entries(obj)) {
+      result[key] = deepSanitize(val)
+    }
+    return result
+  }
+  return obj
 }
