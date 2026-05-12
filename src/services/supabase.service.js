@@ -1,53 +1,147 @@
-/**
- * Supabase Service — centralized Supabase client & data operations
- * Handles connection, upsert, get, and realtime subscriptions
- */
 import { createClient } from '@supabase/supabase-js'
 
-const SUPABASE_URL = 'https://qajgqatflmiiwqznxfha.supabase.co'
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhamdxYXRmbG1paXdxem54ZmhhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyNDQ0NTYsImV4cCI6MjA5MzgyMDQ1Nn0.fJuwU3aHdzOBzJj1osH0aaJ59QIlb2RxeGRaCSnaAus'
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://qajgqatflmiiwqznxfha.supabase.co'
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhamdxYXRmbG1paXdxem54ZmhhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyNDQ0NTYsImV4cCI6MjA5MzgyMDQ1Nn0.fJuwU3aHdzOBzJj1osH0aaJ59QIlb2RxeGRaCSnaAus'
 
-export const SB = createClient(SUPABASE_URL, SUPABASE_KEY)
+export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
+
+let _sbToken = ''
+
+export function getSbToken() {
+  return _sbToken
+}
+
+export function setSbToken(token) {
+  _sbToken = token
+}
+
+const _pendingRequests = new Map()
+const _pendingWrites = new Map()
+const MAX_RETRIES = 3
+const BASE_RETRY_DELAY = 1000
+const MAX_RETRY_DELAY = 10000
+const REQUEST_TIMEOUT = 15000
+
+function _retryDelay(attempt) {
+  const base = BASE_RETRY_DELAY * Math.pow(2, attempt)
+  const jitter = base * 0.3 * Math.random()
+  return Math.min(base + jitter, MAX_RETRY_DELAY)
+}
+
+async function withRetry(fn, retries = MAX_RETRIES) {
+  for (let i = 0; i < retries; i++) {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT)
+
+    try {
+      const result = await fn(controller.signal)
+      clearTimeout(timer)
+      return result
+    } catch (e) {
+      clearTimeout(timer)
+      if (i === retries - 1) throw e
+      await new Promise(r => setTimeout(r, _retryDelay(i)))
+    }
+  }
+}
+
+function dedupeKey(type, key) {
+  return `${type}:${key}`
+}
+
+function isAuthError(error) {
+  if (!error) return false
+  const msg = error.message || ''
+  return msg.includes('JWT') || msg.includes('token') || error.code === '401' || error.code === 'PGRST301'
+}
+
+let _onAuthError = null
+
+export function setAuthErrorHandler(handler) {
+  _onAuthError = handler
+}
+
+function handlePossibleAuthError(error) {
+  if (isAuthError(error) && _onAuthError) {
+    _onAuthError()
+  }
+}
+
+export async function sbUpsert(uid, dataType, dataKey, data) {
+  if (!uid) return
+
+  // Deduplicate writes: wait for previous write to same key before starting
+  const wk = dedupeKey(dataType, dataKey || '')
+  if (_pendingWrites.has(wk)) {
+    try { await _pendingWrites.get(wk) } catch { /* ignore */ }
+  }
+
+  const promise = (async () => {
+    const { error } = await withRetry((signal) =>
+      supabase.from('user_data').upsert(
+        { user_id: uid, data_type: dataType, data_key: dataKey || '', data },
+        { onConflict: 'user_id,data_type,data_key' },
+      ).abortSignal(signal),
+    )
+    if (error) {
+      console.error('[SB] upsert:', error)
+      handlePossibleAuthError(error)
+    }
+  })().finally(() => {
+    _pendingWrites.delete(wk)
+  })
+
+  _pendingWrites.set(wk, promise)
+  return promise
+}
+
+export async function sbGet(uid, dataType, dataKey) {
+  if (!uid) return null
+  const dk = dedupeKey(dataType, dataKey || '')
+  if (_pendingRequests.has(dk)) return _pendingRequests.get(dk)
+
+  const promise = withRetry(async (signal) => {
+    const { data, error } = await supabase
+      .from('user_data')
+      .select('data')
+      .eq('user_id', uid)
+      .eq('data_type', dataType)
+      .eq('data_key', dataKey || '')
+      .maybeSingle()
+      .abortSignal(signal)
+    if (error) {
+      console.error('[SB] get:', error)
+      handlePossibleAuthError(error)
+      return null
+    }
+    return data?.data || null
+  }).finally(() => {
+    _pendingRequests.delete(dk)
+  })
+
+  _pendingRequests.set(dk, promise)
+  return promise
+}
 
 /**
- * Upsert data to user_data table
+ * Clear all pending request/write tracking.
+ * Call on logout or component unmount to prevent stale promises.
  */
-export async function sbUpsert(userId, dataType, dataKey, data) {
-  if (!userId) return
-  const { error } = await SB.from('user_data').upsert(
-    { user_id: userId, data_type: dataType, data_key: dataKey || '', data },
-    { onConflict: 'user_id,data_type,data_key' }
+export function clearPendingRequests() {
+  _pendingRequests.clear()
+  _pendingWrites.clear()
+}
+
+export async function sbDelete(uid, dataType, dataKey) {
+  if (!uid) return
+  const { error } = await withRetry((signal) =>
+    supabase
+      .from('user_data')
+      .delete()
+      .eq('user_id', uid)
+      .eq('data_type', dataType)
+      .eq('data_key', dataKey || '')
+      .abortSignal(signal),
   )
-  if (error) console.error('[SB] upsert:', error)
-}
-
-/**
- * Get data from user_data table
- */
-export async function sbGet(userId, dataType, dataKey) {
-  if (!userId) return null
-  const { data, error } = await SB.from('user_data')
-    .select('data')
-    .eq('user_id', userId)
-    .eq('data_type', dataType)
-    .eq('data_key', dataKey || '')
-    .maybeSingle()
-  if (error) { console.error('[SB] get:', error); return null }
-  return data?.data || null
-}
-
-/**
- * Translate Supabase auth error messages to Arabic
- */
-export function sbAuthErr(msg) {
-  const m = msg.toLowerCase()
-  if (m.includes('invalid login')) return 'البريد أو كلمة المرور غير صحيحة'
-  if (m.includes('email not confirmed')) return 'البريد لم يتم تأكيده بعد'
-  if (m.includes('user not found')) return 'البريد غير مسجّل'
-  if (m.includes('invalid email')) return 'صيغة البريد غير صحيحة'
-  if (m.includes('rate limit') || m.includes('too many')) return 'محاولات كثيرة، حاول لاحقاً'
-  if (m.includes('already registered') || m.includes('already been registered')) return 'البريد مسجّل مسبقاً'
-  if (m.includes('password')) return 'كلمة المرور ضعيفة (6 أحرف+)'
-  if (m.includes('signup is disabled')) return 'التسجيل معطّل حالياً'
-  return msg
+  if (error) console.error('[SB] delete:', error)
 }
