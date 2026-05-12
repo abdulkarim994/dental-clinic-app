@@ -234,6 +234,23 @@ async function _markInProgress(id) {
   // IndexedDB doesn't support in_progress status; no-op is safe
 }
 
+/**
+ * Get queue statistics for diagnostics.
+ */
+export async function getQueueStats() {
+  try {
+    const pending = await getPendingActions()
+    const quarantined = await getQuarantinedActions()
+    return {
+      pending: pending.length,
+      quarantined: quarantined.length,
+      total: pending.length + quarantined.length,
+    }
+  } catch {
+    return { pending: 0, quarantined: 0, total: 0 }
+  }
+}
+
 function _parseData(data) {
   if (!data) return null
   if (typeof data === 'string') {
