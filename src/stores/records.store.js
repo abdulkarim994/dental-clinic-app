@@ -1,13 +1,13 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { shallowRef } from 'vue'
 import { markMonthDirty } from '@/services/sync.service'
 import { sanitizeRecord } from '@/utils/sanitize'
 import { enqueueSyncAction } from '@/services/sync-queue.service'
 
 export const useRecordsStore = defineStore('records', () => {
-  const records = ref([])
-  const prosthetics = ref([])
-  const isLoadedFromCache = ref(false)
+  const records = shallowRef([])
+  const prosthetics = shallowRef([])
+  const isLoadedFromCache = shallowRef(false)
 
   function addRecord(record) {
     const clean = sanitizeRecord(record)
@@ -37,6 +37,11 @@ export const useRecordsStore = defineStore('records', () => {
     }
   }
 
+  function batchSetRecords(recs, pros) {
+    records.value = recs
+    if (pros !== undefined) prosthetics.value = pros
+  }
+
   return {
     records,
     prosthetics,
@@ -44,5 +49,6 @@ export const useRecordsStore = defineStore('records', () => {
     addRecord,
     updateRecord,
     deleteRecord,
+    batchSetRecords,
   }
 })

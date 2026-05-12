@@ -6,6 +6,8 @@
  * or OffscreenCanvas is not supported.
  */
 
+import { markWorkerUsed } from '@/services/auto-cleanup.service'
+
 let _worker = null
 let _idCounter = 0
 const _pending = new Map()
@@ -45,6 +47,7 @@ export async function compressInWorker(file, maxDim = 1200, quality = 0.8) {
   const worker = getWorker()
   if (!worker) return null
 
+  markWorkerUsed()
   const buffer = await file.arrayBuffer()
   const id = ++_idCounter
 

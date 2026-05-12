@@ -1,12 +1,12 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { shallowRef } from 'vue'
 import { markDebtsDirty } from '@/services/sync.service'
 import { enqueueSyncAction } from '@/services/sync-queue.service'
 import { sanitizeDebt } from '@/utils/sanitize'
 
 export const useDebtsStore = defineStore('debts', () => {
-  const debts = ref([])
-  const isLoadedFromCache = ref(false)
+  const debts = shallowRef([])
+  const isLoadedFromCache = shallowRef(false)
 
   function addDebt(debt) {
     const clean = sanitizeDebt(debt)
