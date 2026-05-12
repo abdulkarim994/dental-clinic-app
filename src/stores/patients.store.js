@@ -10,6 +10,7 @@ export const usePatientsStore = defineStore('patients', () => {
   const searchQuery = ref('')
   const selectedPatient = ref(null)
   const showDetail = ref(false)
+  const isLoadedFromCache = ref(false)
 
   let _patMapCache = null
   let _patMapCacheKey = ''
@@ -171,6 +172,7 @@ export const usePatientsStore = defineStore('patients', () => {
     searchQuery,
     selectedPatient,
     showDetail,
+    isLoadedFromCache,
     patientMap,
     filteredPatients,
     totalPatients,

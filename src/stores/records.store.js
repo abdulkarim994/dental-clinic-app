@@ -7,6 +7,7 @@ import { enqueueSyncAction } from '@/services/sync-queue.service'
 export const useRecordsStore = defineStore('records', () => {
   const records = ref([])
   const prosthetics = ref([])
+  const isLoadedFromCache = ref(false)
 
   function addRecord(record) {
     const clean = sanitizeRecord(record)
@@ -37,6 +38,7 @@ export const useRecordsStore = defineStore('records', () => {
   return {
     records,
     prosthetics,
+    isLoadedFromCache,
     addRecord,
     updateRecord,
     deleteRecord,

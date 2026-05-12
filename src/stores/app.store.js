@@ -9,6 +9,7 @@ import { useDebtsStore as useDebtsSubStore } from './debts.store'
 import { useAppointmentsStore } from './appointments.store'
 import { useConfigStore, DEFAULT_CONFIG } from './config.store'
 import { useSyncStore } from './sync.store'
+import { usePatientsStore } from './patients.store'
 import { startBackgroundSync, stopBackgroundSync, cacheSupabaseData } from '@/services/background-sync.service'
 
 export const useAppStore = defineStore('app', () => {
@@ -17,6 +18,7 @@ export const useAppStore = defineStore('app', () => {
   const appointmentsStore = useAppointmentsStore()
   const configStore = useConfigStore()
   const syncSt = useSyncStore()
+  const patientsStore = usePatientsStore()
 
   const records = computed({
     get: () => recordsStore.records,
@@ -74,6 +76,11 @@ export const useAppStore = defineStore('app', () => {
     if (validDebts.length) debtsSubStore.debts = validDebts
     if (validAppts.length) appointmentsStore.appointments = validAppts
     if (validConfig) configStore.config = { ...DEFAULT_CONFIG, ...validConfig }
+
+    recordsStore.isLoadedFromCache = true
+    debtsSubStore.isLoadedFromCache = true
+    appointmentsStore.isLoadedFromCache = true
+    patientsStore.isLoadedFromCache = true
   }
 
   function saveToCache(uid) {
@@ -135,6 +142,11 @@ export const useAppStore = defineStore('app', () => {
       const validConfig = data.config ? validateConfig(data.config) : null
       if (validConfig) configStore.config = { ...DEFAULT_CONFIG, ...validConfig }
       if (showOl) syncSt.syncProgress = 100
+
+      recordsStore.isLoadedFromCache = false
+      debtsSubStore.isLoadedFromCache = false
+      appointmentsStore.isLoadedFromCache = false
+      patientsStore.isLoadedFromCache = false
 
       // Populate the offline repository layer in the background (non-blocking)
       cacheSupabaseData({
