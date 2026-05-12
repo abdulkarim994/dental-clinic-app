@@ -1,16 +1,16 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, shallowRef } from 'vue'
 import { markApptsDirty } from '@/services/sync.service'
 import { enqueueSyncAction } from '@/services/sync-queue.service'
 import { sanitizeAppointment } from '@/utils/sanitize'
 
 export const useAppointmentsStore = defineStore('appointments', () => {
-  const appointments = ref([])
+  const appointments = shallowRef([])
   const isLoadedFromCache = ref(false)
 
   function addAppointment(appt) {
     const clean = sanitizeAppointment(appt)
-    appointments.value.push(clean)
+    appointments.value = [...appointments.value, clean]
     markApptsDirty()
     enqueueSyncAction({ type: 'appt_add', table: 'appointments', recordId: clean.id, data: clean }).catch(() => {})
   }
@@ -25,7 +25,9 @@ export const useAppointmentsStore = defineStore('appointments', () => {
     const idx = appointments.value.findIndex(a => a.id === id)
     if (idx !== -1) {
       const clean = sanitizeAppointment(updates)
-      appointments.value[idx] = { ...appointments.value[idx], ...clean }
+      const updated = [...appointments.value]
+      updated[idx] = { ...updated[idx], ...clean }
+      appointments.value = updated
       markApptsDirty()
       enqueueSyncAction({ type: 'appt_update', table: 'appointments', recordId: id, data: { id, ...clean } }).catch(() => {})
     }

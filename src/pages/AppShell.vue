@@ -107,7 +107,7 @@ import { ensureMonthLoaded, loadAllMonths, mergeMonthData, setupRealtimeSubscrip
 import { setAuthErrorHandler, clearPendingRequests } from '@/services/supabase.service'
 import { abortAllRequests as abortSBQueries, clearQueryCache } from '@/services/supabase-query.service'
 import { logError, ErrorCategory } from '@/services/error.service'
-import { cleanupOrphanedThumbnails, getAllActiveXrayKeys } from '@/services/image-pipeline.service'
+// image-pipeline imported lazily in onMounted to avoid pulling 206KB chunk into startup
 import { useRouter, useRoute } from 'vue-router'
 import { useAppStore } from '@/stores/app.store'
 import { useAuthStore } from '@/stores/auth.store'
@@ -269,11 +269,15 @@ onMounted(() => {
     }
   })
 
-  // Clean up orphaned xray thumbnails from localStorage (runs once on mount)
-  try {
-    const activeKeys = getAllActiveXrayKeys(appStore.config.patientXrays)
-    cleanupOrphanedThumbnails(activeKeys)
-  } catch { /* non-critical */ }
+  // Defer image cleanup to idle time (avoids loading 206KB chunk during startup)
+  const ric = globalThis.requestIdleCallback || ((cb) => setTimeout(cb, 2000))
+  ric(async () => {
+    try {
+      const { cleanupOrphanedThumbnails, getAllActiveXrayKeys } = await import('@/services/image-pipeline.service')
+      const activeKeys = getAllActiveXrayKeys(appStore.config.patientXrays)
+      cleanupOrphanedThumbnails(activeKeys)
+    } catch { /* non-critical */ }
+  }, { timeout: 10000 })
   setAuthErrorHandler(() => {
     toast('انتهت الجلسة — يرجى تسجيل الدخول مجدداً')
     authStore.doLogout().catch(() => {})

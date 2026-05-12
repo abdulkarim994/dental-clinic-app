@@ -91,6 +91,8 @@ router.afterEach(() => {
     import('@/modules/records/RecordsTab.vue')
     import('@/modules/patients/PatientsTab.vue')
     import('@/modules/debts/DebtsTab.vue')
+    import('@/modules/calendar/CalendarTab.vue')
+    import('@/modules/treasury/TreasuryTab.vue')
   }, { timeout: 5000 })
 })
 

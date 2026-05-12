@@ -278,18 +278,5 @@ export async function deleteXrayImage(key) {
   }
 }
 
-export function getPatientPhotoFromStorage(name) {
-  try {
-    return localStorage.getItem(`dental_photo_${name}`) || null
-  } catch {
-    return null
-  }
-}
-
-export function savePatientPhotoToStorage(name, dataUrl) {
-  try {
-    localStorage.setItem(`dental_photo_${name}`, dataUrl)
-  } catch {
-    console.warn('[Image] Cannot save patient photo to storage')
-  }
-}
+// Re-export from cache.service for backward compatibility
+export { getPatientPhotoFromStorage, savePatientPhotoToStorage } from './cache.service'

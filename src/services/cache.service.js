@@ -112,3 +112,23 @@ export async function getCachedDebtsFromDB() {
     return []
   }
 }
+
+// ── Patient Photo Storage ──
+// Lightweight localStorage helpers. Kept here (not in image.service) to avoid
+// pulling the 206KB image-services chunk into the store startup path.
+
+export function getPatientPhotoFromStorage(name) {
+  try {
+    return localStorage.getItem(`dental_photo_${name}`) || null
+  } catch {
+    return null
+  }
+}
+
+export function savePatientPhotoToStorage(name, dataUrl) {
+  try {
+    localStorage.setItem(`dental_photo_${name}`, dataUrl)
+  } catch {
+    console.warn('[Cache] Cannot save patient photo to storage')
+  }
+}
