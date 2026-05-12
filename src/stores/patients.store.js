@@ -5,6 +5,7 @@ import { fuzzyMatch, fuzzyScore } from '@/utils/search'
 import { getPatientPhotoFromStorage, savePatientPhotoToStorage } from '@/services/image.service'
 import { isProsthetic } from '@/utils/format'
 import { useMemoizedArray } from '@/composables/useMemoized'
+import { patientsRepo } from '@/repositories/patients.repository'
 
 export const usePatientsStore = defineStore('patients', () => {
   const searchQuery = ref('')
@@ -168,6 +169,22 @@ export const usePatientsStore = defineStore('patients', () => {
     showDetail.value = false
   }
 
+  function invalidatePatientCache() {
+    _patMapCache = null
+    _patMapCacheKey = ''
+  }
+
+  function linkRecordToPatient(patientName, newRecord) {
+    invalidatePatientCache()
+
+    patientsRepo.upsert({
+      id: patientName,
+      name: patientName,
+      last_visit: newRecord.date || null,
+      _mod: newRecord._mod || Date.now(),
+    }).catch(() => {})
+  }
+
   return {
     searchQuery,
     selectedPatient,
@@ -187,5 +204,7 @@ export const usePatientsStore = defineStore('patients', () => {
     setSearch,
     selectPatient,
     clearSelection,
+    invalidatePatientCache,
+    linkRecordToPatient,
   }
 })
