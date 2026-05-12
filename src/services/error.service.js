@@ -163,6 +163,19 @@ export function getErrorSummary() {
   return summary
 }
 
+/**
+ * Get error statistics (counts by category and severity).
+ */
+export function getErrorStats() {
+  const byCategory = {}
+  const bySeverity = {}
+  for (const entry of _errorLog) {
+    byCategory[entry.category] = (byCategory[entry.category] || 0) + 1
+    bySeverity[entry.severity] = (bySeverity[entry.severity] || 0) + 1
+  }
+  return { total: _errorLog.length, byCategory, bySeverity }
+}
+
 export function clearErrorLog() {
   _errorLog.length = 0
 }

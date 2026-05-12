@@ -6,7 +6,7 @@
  */
 
 // Formatting
-export { formatNumber, getCurrentMonth, getCurrentDate, isProsthetic } from './format'
+export { formatNumber, formatDate, getMonthFromDate, getCurrentMonth, getCurrentDate, isProsthetic } from './format'
 
 // Search
 export { normAr, fuzzyMatch, fuzzyScore, levenshtein } from './search'
@@ -15,6 +15,8 @@ export { normAr, fuzzyMatch, fuzzyScore, levenshtein } from './search'
 export {
   escapeHtml,
   sanitizeInput,
+  sanitizeEmail,
+  deepSanitize,
   sanitizeRecord,
   sanitizeDebt,
   sanitizeAppointment,
