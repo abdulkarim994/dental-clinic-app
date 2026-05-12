@@ -11,7 +11,7 @@ import { Capacitor } from '@capacitor/core'
 import { CapacitorSQLite, SQLiteConnection } from '@capacitor-community/sqlite'
 
 const DB_NAME = 'dental_clinic_offline'
-const DB_VERSION = 1
+const DB_VERSION = 2
 
 let _sqlite = null
 let _db = null
@@ -106,6 +106,7 @@ CREATE TABLE IF NOT EXISTS sync_queue (
   action TEXT NOT NULL,
   table_name TEXT NOT NULL,
   record_id TEXT,
+  user_id TEXT,
   data TEXT,
   status TEXT DEFAULT 'pending',
   retries INTEGER DEFAULT 0,
@@ -116,6 +117,33 @@ CREATE TABLE IF NOT EXISTS sync_queue (
 );
 
 CREATE INDEX IF NOT EXISTS idx_sync_status ON sync_queue(status);
+CREATE INDEX IF NOT EXISTS idx_sync_user ON sync_queue(user_id);
+
+CREATE TABLE IF NOT EXISTS pending_uploads (
+  id TEXT PRIMARY KEY,
+  file_key TEXT NOT NULL,
+  patient_name TEXT,
+  file_path TEXT,
+  file_size INTEGER DEFAULT 0,
+  mime_type TEXT,
+  status TEXT DEFAULT 'pending',
+  retries INTEGER DEFAULT 0,
+  max_retries INTEGER DEFAULT 5,
+  created_at TEXT DEFAULT (datetime('now')),
+  last_attempt TEXT,
+  error_msg TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_uploads_status ON pending_uploads(status);
+
+CREATE TABLE IF NOT EXISTS sync_meta (
+  key TEXT PRIMARY KEY,
+  value TEXT,
+  user_id TEXT,
+  updated_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_sync_meta_user ON sync_meta(user_id);
 
 CREATE TABLE IF NOT EXISTS metadata (
   key TEXT PRIMARY KEY,
@@ -159,6 +187,9 @@ export async function initNativeSQLite() {
     for (const stmt of statements) {
       await _db.execute(stmt + ';')
     }
+
+    // Crash recovery: reset any items stuck in 'in_progress' status
+    await _recoverFromCrash()
 
     _initialized = true
     console.log('[SQLiteNative] Database initialized successfully')
@@ -322,4 +353,92 @@ export async function closeDB() {
  */
 export function isInitialized() {
   return _initialized
+}
+
+// ── Crash Recovery ──
+
+async function _recoverFromCrash() {
+  try {
+    // Reset sync_queue items that were in_progress when the app crashed
+    await _db.run(
+      `UPDATE sync_queue SET status = 'pending', retries = retries + 1
+       WHERE status = 'in_progress'`,
+      [],
+    )
+
+    // Reset pending_uploads that were in_progress
+    await _db.run(
+      `UPDATE pending_uploads SET status = 'pending', retries = retries + 1
+       WHERE status = 'in_progress'`,
+      [],
+    )
+
+    const recovered = await query(
+      `SELECT COUNT(*) as cnt FROM sync_queue WHERE retries > 0 AND status = 'pending'`,
+    )
+    if (recovered[0]?.cnt > 0) {
+      console.log(`[SQLiteNative] Recovered ${recovered[0].cnt} items from crash`)
+    }
+  } catch (e) {
+    console.warn('[SQLiteNative] Crash recovery check failed:', e)
+  }
+}
+
+// ── Sync Meta Helpers ──
+
+export async function setSyncMeta(key, value, userId = '') {
+  if (!_db) throw new Error('[SQLiteNative] DB not initialized')
+  return _db.run(
+    `INSERT INTO sync_meta (key, value, user_id, updated_at)
+     VALUES (?, ?, ?, datetime('now'))
+     ON CONFLICT(key) DO UPDATE SET value = ?, updated_at = datetime('now')`,
+    [key, typeof value === 'object' ? JSON.stringify(value) : String(value), userId,
+     typeof value === 'object' ? JSON.stringify(value) : String(value)],
+  )
+}
+
+export async function getSyncMeta(key) {
+  if (!_db) return null
+  const row = await queryFirst(`SELECT value FROM sync_meta WHERE key = ?`, [key])
+  if (!row) return null
+  try { return JSON.parse(row.value) } catch { return row.value }
+}
+
+// ── Pending Uploads ──
+
+export async function addPendingUpload(upload) {
+  if (!_db) throw new Error('[SQLiteNative] DB not initialized')
+  return _db.run(
+    `INSERT OR REPLACE INTO pending_uploads
+     (id, file_key, patient_name, file_path, file_size, mime_type, status)
+     VALUES (?, ?, ?, ?, ?, ?, 'pending')`,
+    [upload.id, upload.file_key, upload.patient_name || '',
+     upload.file_path || '', upload.file_size || 0, upload.mime_type || ''],
+  )
+}
+
+export async function getPendingUploads() {
+  return query(
+    `SELECT * FROM pending_uploads WHERE status = 'pending' ORDER BY created_at ASC`,
+  )
+}
+
+export async function markUploadComplete(id) {
+  return execute(`DELETE FROM pending_uploads WHERE id = ?`, [id])
+}
+
+export async function failUpload(id, errorMsg = '') {
+  const item = await queryFirst(`SELECT * FROM pending_uploads WHERE id = ?`, [id])
+  if (!item) return
+  const newRetries = (item.retries || 0) + 1
+  if (newRetries >= (item.max_retries || 5)) {
+    return execute(
+      `UPDATE pending_uploads SET status = 'failed', retries = ?, error_msg = ?, last_attempt = datetime('now') WHERE id = ?`,
+      [newRetries, errorMsg, id],
+    )
+  }
+  return execute(
+    `UPDATE pending_uploads SET retries = ?, error_msg = ?, last_attempt = datetime('now') WHERE id = ?`,
+    [newRetries, errorMsg, id],
+  )
 }

@@ -10,7 +10,7 @@
  * known columns, and any custom query methods.
  */
 
-import { isUsingSQLite, parseRowData, prepareForStorage } from '@/services/db-adapter.service'
+import { isUsingSQLite, isDatabaseReady, parseRowData, prepareForStorage } from '@/services/db-adapter.service'
 import * as native from '@/services/sqlite-native.service'
 import * as idb from '@/services/sqlite.service'
 
@@ -60,6 +60,15 @@ export class BaseRepository {
   }
 
   /**
+   * Partial update: merges updates into existing record then upserts.
+   */
+  async update(id, updates) {
+    const existing = await this.getById(id)
+    if (!existing) return null
+    return this.upsert({ ...existing, ...updates, id })
+  }
+
+  /**
    * Bulk insert/update records
    */
   async bulkUpsert(records) {
@@ -95,6 +104,20 @@ export class BaseRepository {
     // IndexedDB fallback: return all (no _mod index in IDB currently)
     const all = await this._idbGetAll()
     return all.filter(r => (r._mod || 0) > timestamp)
+  }
+
+  /**
+   * Get total count of non-deleted records
+   */
+  async count() {
+    if (isUsingSQLite()) {
+      const result = await native.queryFirst(
+        `SELECT COUNT(*) as cnt FROM ${this.tableName} WHERE _deleted = 0`,
+      )
+      return result?.cnt || 0
+    }
+    const all = await this.getAll()
+    return all.length
   }
 
   // ── IndexedDB fallback methods (delegate to existing sqlite.service.js) ──

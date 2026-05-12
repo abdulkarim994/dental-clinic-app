@@ -21,7 +21,8 @@ import { processQueue, enqueueSyncAction, getPendingCount } from './sync-queue.s
 import { patientsRepo } from '@/repositories/patients.repository'
 import { appointmentsRepo } from '@/repositories/appointments.repository'
 import { xraysRepo } from '@/repositories/xrays.repository'
-import { isDatabaseReady } from './db-adapter.service'
+import { isDatabaseReady, isUsingSQLite } from './db-adapter.service'
+import { setSyncMeta, getSyncMeta } from './sqlite-native.service'
 
 let _syncInterval = null
 let _isProcessing = false
@@ -119,11 +120,13 @@ export function onSyncEvent(callback) {
  */
 export async function getSyncStatus() {
   const pendingCount = await getPendingCount()
+  const lastSync = isUsingSQLite() ? await getSyncMeta('last_sync_ts').catch(() => null) : null
   return {
     isProcessing: _isProcessing,
     isOnline: navigator.onLine !== false,
     pendingCount,
     isRunning: !!_syncInterval,
+    lastSyncTimestamp: lastSync ? Number(lastSync) : null,
   }
 }
 
@@ -205,6 +208,12 @@ async function _processSyncQueue(syncHandler) {
 
   try {
     const result = await processQueue(syncHandler)
+
+    // Record last successful sync timestamp
+    if (result.success && isUsingSQLite()) {
+      setSyncMeta('last_sync_ts', Date.now()).catch(() => {})
+    }
+
     _notifyCallbacks('sync_complete', result)
     return result
   } catch (e) {
