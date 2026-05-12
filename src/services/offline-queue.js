@@ -1,3 +1,14 @@
+/**
+ * Offline Queue — Unified Bridge
+ *
+ * Delegates queue operations to sync-queue.service.js while maintaining
+ * the original API surface for backward compatibility.
+ * Network status utilities (isOnline, onOnlineStatusChange) remain here
+ * as they are independent of the queue implementation.
+ */
+
+import { enqueueSyncAction, processQueue as sqProcessQueue } from './sync-queue.service'
+
 const QUEUE_KEY = 'dental_sync_queue'
 
 export function getQueue() {
@@ -9,9 +20,18 @@ export function getQueue() {
 }
 
 export function addToQueue(action) {
-  const queue = getQueue()
-  queue.push({ ...action, ts: Date.now(), retries: 0 })
-  localStorage.setItem(QUEUE_KEY, JSON.stringify(queue))
+  // Delegate to the enhanced sync queue service with dedup + backoff
+  enqueueSyncAction({
+    type: action.type || 'sync',
+    table: action.table || '',
+    recordId: action.recordId || '',
+    data: action,
+  }).catch(() => {
+    // Fallback: save to localStorage if enhanced queue fails
+    const queue = getQueue()
+    queue.push({ ...action, ts: Date.now(), retries: 0 })
+    localStorage.setItem(QUEUE_KEY, JSON.stringify(queue))
+  })
 }
 
 export function clearQueue() {
@@ -42,6 +62,13 @@ export function onOnlineStatusChange(cb) {
 
 export async function processQueue(syncFn) {
   if (!isOnline()) return false
+
+  // Process the enhanced sync queue first
+  try {
+    await sqProcessQueue(syncFn)
+  } catch { /* non-critical */ }
+
+  // Also drain any legacy localStorage items
   const queue = getQueue()
   if (!queue.length) return true
   let allOk = true

@@ -111,7 +111,7 @@ async function handleLogin() {
   errorMsg.value = ''
   loading.value = true
   try {
-    await authStore.doLogin(email.value.trim(), password.value)
+    await authStore.doLogin(email.value.trim(), password.value, remember.value)
     appStore.loadFromCache(authStore.uid)
     try {
       await Promise.race([

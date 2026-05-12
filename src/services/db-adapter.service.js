@@ -32,6 +32,8 @@ export async function initDatabase() {
       console.log('[DBAdapter] Using native SQLite backend')
       // Also init IndexedDB as secondary fallback during migration
       await initIndexedDB().catch(() => {})
+      // Run IndexedDB → SQLite migration if needed (non-blocking)
+      import('./idb-migration.service').then(m => m.runMigrationIfNeeded()).catch(() => {})
       return _backend
     }
   }

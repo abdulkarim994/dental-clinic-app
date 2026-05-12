@@ -12,14 +12,17 @@ export const useAuthStore = defineStore('auth', () => {
   const isLoggedIn = computed(() => !!user.value)
   const userEmail = computed(() => user.value?.email || '')
 
-  async function doLogin(email, password) {
+  const rememberSession = ref(true)
+
+  async function doLogin(email, password, remember = true) {
     loading.value = true
     error.value = ''
+    rememberSession.value = remember
     try {
       const data = await login(email, password)
       user.value = data.user
       uid.value = data.user?.id || null
-      if (data.session) secureSetSession(data.session)
+      if (data.session && remember) secureSetSession(data.session)
     } catch (e) {
       error.value = e.message
       throw e
@@ -80,6 +83,7 @@ export const useAuthStore = defineStore('auth', () => {
     error,
     isLoggedIn,
     userEmail,
+    rememberSession,
     doLogin,
     doRegister,
     doLogout,

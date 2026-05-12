@@ -1,5 +1,6 @@
 import { sbUpsert, sbGet, supabase } from './supabase.service'
 import { cacheSaveAll, cacheGetAll } from './cache.service'
+import { queries, abortAllRequests as abortSBQueries } from './supabase-query.service'
 
 const _dirtyMonths = new Set()
 let _debtsDirty = false
@@ -114,20 +115,27 @@ export async function saveToSupabase(uid, { records, prosthetics, debts, config,
       _knownMonths.add(m)
     }
 
-    if (showOl || _debtsDirty) {
+    const savedDebts = showOl || _debtsDirty
+    if (savedDebts) {
       ops.push(sbUpsert(uid, 'debts', '', debts))
-      _debtsDirty = false
     }
 
-    if (showOl || _apptsDirty) {
+    const savedAppts = showOl || _apptsDirty
+    if (savedAppts) {
       ops.push(sbUpsert(uid, 'appointments', '', appointments))
-      _apptsDirty = false
     }
 
     ops.push(sbUpsert(uid, 'config', '', config))
-    _dirtyMonths.clear()
 
     await Promise.all(ops)
+
+    // Clear dirty flags only after successful save
+    if (savedDebts) _debtsDirty = false
+    if (savedAppts) _apptsDirty = false
+    for (const m of monthsToSave) {
+      _dirtyMonths.delete(m)
+    }
+
     return true
   } catch (e) {
     console.error('[Sync] save error:', e)
@@ -173,10 +181,10 @@ export async function loadFromSupabase(uid) {
 
   try {
     const [index, debtsData, apptsData, cfgData] = await Promise.all([
-      sbGet(uid, 'index', ''),
-      sbGet(uid, 'debts', ''),
-      sbGet(uid, 'appointments', ''),
-      sbGet(uid, 'config', ''),
+      queries.getIndex(uid),
+      queries.getDebts(uid),
+      queries.getAppointments(uid),
+      queries.getConfig(uid),
     ])
 
     if (debtsData) results.debts = debtsData
@@ -208,7 +216,7 @@ export async function loadFromSupabase(uid) {
 export async function ensureMonthLoaded(uid, month) {
   if (_loadedMonths.has(month)) return null
   try {
-    const data = await sbGet(uid, 'month', month)
+    const data = await queries.getMonth(uid, month)
     _loadedMonths.add(month)
     return data
   } catch (e) {

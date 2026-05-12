@@ -6,6 +6,7 @@ import { sanitizeAppointment } from '@/utils/sanitize'
 
 export const useAppointmentsStore = defineStore('appointments', () => {
   const appointments = ref([])
+  const isLoadedFromCache = ref(false)
 
   function addAppointment(appt) {
     const clean = sanitizeAppointment(appt)
@@ -32,6 +33,7 @@ export const useAppointmentsStore = defineStore('appointments', () => {
 
   return {
     appointments,
+    isLoadedFromCache,
     addAppointment,
     removeAppointment,
     updateAppointment,

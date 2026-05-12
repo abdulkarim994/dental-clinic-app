@@ -203,6 +203,7 @@ import { ref, computed, watch, provide, onMounted, onActivated, nextTick } from 
 import { useRouter, useRoute } from 'vue-router'
 import { useAppStore } from '@/stores/app.store'
 import { useAuthStore } from '@/stores/auth.store'
+import { usePatientsStore } from '@/stores/patients.store'
 import { useToast } from '@/composables/useToast'
 import { formatNumber, isProsthetic, getCurrentDate } from '@/utils/format'
 import { fuzzyMatch } from '@/utils/search'
@@ -214,6 +215,7 @@ const router = useRouter()
 const route = useRoute()
 const app = useAppStore()
 const auth = useAuthStore()
+const patients = usePatientsStore()
 const { toast } = useToast()
 
 const saving = ref(false)
@@ -571,6 +573,12 @@ async function saveRec() {
 
   markMonthDirty(date)
   markDebtsDirty()
+
+  const savedRecord = ip
+    ? { id: editId.value || now_mod, date, name: name.trim(), _mod: now_mod, _t: 'p' }
+    : { id: editId.value || now_mod, date, name: name.trim(), amount, service, _mod: now_mod, _t: 'r' }
+  patients.linkRecordToPatient(name.trim(), savedRecord)
+
   app.saveToCache(uid)
   app.syncSave(uid, false)
   resetForm()

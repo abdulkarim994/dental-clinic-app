@@ -15,7 +15,7 @@
  * The existing queue is not removed — both can coexist safely.
  */
 
-import { isUsingSQLite } from './db-adapter.service'
+import { isUsingSQLite, isDatabaseReady } from './db-adapter.service'
 import * as native from './sqlite-native.service'
 import { addSyncAction as idbAddSyncAction, getPendingSyncActions as idbGetPending, markSyncActionDone as idbMarkDone, markSyncActionFailed as idbMarkFailed, clearSyncQueue as idbClearQueue } from './sqlite.service'
 
@@ -26,6 +26,11 @@ const BASE_RETRY_DELAY = 1000 // 1 second
  * Add an action to the sync queue
  */
 export async function enqueueSyncAction(action) {
+  if (!isDatabaseReady()) {
+    // Fallback to IndexedDB if database not ready yet
+    return idbAddSyncAction(action)
+  }
+
   if (isUsingSQLite()) {
     // Deduplicate: if same action+table+record exists as pending, skip
     const existing = await native.queryFirst(
@@ -43,9 +48,9 @@ export async function enqueueSyncAction(action) {
     }
 
     const result = await native.execute(
-      `INSERT INTO sync_queue (action, table_name, record_id, data, status, retries, max_retries)
-       VALUES (?, ?, ?, ?, 'pending', 0, ?)`,
-      [action.type, action.table || '', action.recordId || '', JSON.stringify(action.data), MAX_RETRIES],
+      `INSERT INTO sync_queue (action, table_name, record_id, user_id, data, status, retries, max_retries)
+       VALUES (?, ?, ?, ?, ?, 'pending', 0, ?)`,
+      [action.type, action.table || '', action.recordId || '', action.userId || '', JSON.stringify(action.data), MAX_RETRIES],
     )
     return result.changes?.lastId
   }
@@ -155,6 +160,8 @@ export async function processQueue(syncFn) {
     }
 
     try {
+      // Mark as in_progress for crash recovery safety
+      await _markInProgress(item.id)
       await syncFn(item)
       await completeAction(item.id)
       processed++
@@ -215,6 +222,16 @@ export async function removeQuarantined(id) {
   if (isUsingSQLite()) {
     return native.execute(`DELETE FROM sync_queue WHERE id = ? AND status = 'failed'`, [id])
   }
+}
+
+async function _markInProgress(id) {
+  if (isUsingSQLite()) {
+    return native.execute(
+      `UPDATE sync_queue SET status = 'in_progress', last_attempt = datetime('now') WHERE id = ?`,
+      [id],
+    )
+  }
+  // IndexedDB doesn't support in_progress status; no-op is safe
 }
 
 function _parseData(data) {

@@ -6,6 +6,7 @@ import { sanitizeDebt } from '@/utils/sanitize'
 
 export const useDebtsStore = defineStore('debts', () => {
   const debts = ref([])
+  const isLoadedFromCache = ref(false)
 
   function addDebt(debt) {
     const clean = sanitizeDebt(debt)
@@ -32,6 +33,7 @@ export const useDebtsStore = defineStore('debts', () => {
 
   return {
     debts,
+    isLoadedFromCache,
     addDebt,
     updateDebt,
     deleteDebt,

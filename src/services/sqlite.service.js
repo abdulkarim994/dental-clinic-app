@@ -5,7 +5,7 @@
  */
 
 const DB_NAME = 'dental_clinic_db'
-const DB_VERSION = 2
+const DB_VERSION = 3
 const STORES = {
   patients: 'patients',
   appointments: 'appointments',
@@ -13,6 +13,8 @@ const STORES = {
   thumbnails: 'thumbnails',
   syncQueue: 'syncQueue',
   metadata: 'metadata',
+  pendingUploads: 'pendingUploads',
+  syncMeta: 'syncMeta',
 }
 
 let _db = null
@@ -41,6 +43,13 @@ export function openDB() {
       }
       if (!db.objectStoreNames.contains(STORES.metadata)) {
         db.createObjectStore(STORES.metadata, { keyPath: 'key' })
+      }
+      if (!db.objectStoreNames.contains(STORES.pendingUploads)) {
+        const upStore = db.createObjectStore(STORES.pendingUploads, { keyPath: 'id' })
+        upStore.createIndex('status', 'status', { unique: false })
+      }
+      if (!db.objectStoreNames.contains(STORES.syncMeta)) {
+        db.createObjectStore(STORES.syncMeta, { keyPath: 'key' })
       }
     }
     request.onsuccess = () => {

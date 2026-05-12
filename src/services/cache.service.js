@@ -23,9 +23,20 @@ export function cacheGet(uid, type) {
 
 export function cacheSet(uid, type, data) {
   try {
-    localStorage.setItem(key(uid, type), JSON.stringify(data))
+    const k = key(uid, type)
+    localStorage.setItem(k, JSON.stringify(data))
+    localStorage.setItem(`${k}_ts`, String(Date.now()))
   } catch (e) {
     console.warn('[Cache] Storage full or unavailable:', e)
+  }
+}
+
+export function getAge(uid, type) {
+  try {
+    const ts = localStorage.getItem(`${key(uid, type)}_ts`)
+    return ts ? Date.now() - Number(ts) : Infinity
+  } catch {
+    return Infinity
   }
 }
 
